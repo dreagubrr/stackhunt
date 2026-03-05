@@ -10,8 +10,9 @@ app.use(cors({
   origin: [
     'http://localhost:3000',
     'http://localhost:5173',
-    process.env.FRONTEND_URL || 'https://job-miner.netlify.app',
-  ],
+    'https://jobminerspain-1.onrender.com',
+    process.env.FRONTEND_URL,
+  ].filter(Boolean),
   credentials: true,
 }));
 app.use(express.json());
