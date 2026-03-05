@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: job-miner-spain-api
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: API_KEY
+        sync: false   # Lo introduces manualmente en Render
+      - key: API_URL
+        value: https://www.careerjet.es/jobs/api/
+      - key: FRONTEND_URL
+        sync: false   # URL de tu app en Netlify, la añades en Render
