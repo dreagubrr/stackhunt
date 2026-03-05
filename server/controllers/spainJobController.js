@@ -1,7 +1,5 @@
 import { getJobsFromCareerjetSpain } from '../scraper/careerjetSpainApi.js';
 import { scrapeTecnoempleo } from '../scraper/tecnoempleoScraper.js';
-import { scrapeInfojobs } from '../scraper/infojobsScraper.js';
-import { scrapeIndeedSpain } from '../scraper/indeedSpainScraper.js';
 
 // Careerjet España (paginado, requiere API key)
 export const getCareerjetSpainJobs = async (req, res) => {
@@ -23,7 +21,7 @@ export const getCareerjetSpainJobs = async (req, res) => {
     res.json(jobsData);
   } catch (error) {
     console.error('Careerjet Spain controller error:', error.message);
-    res.status(500).json({ error: 'Error al obtener empleos', details: error.message });
+    res.status(500).json({ error: 'Error al obtener empleos de Careerjet', details: error.message });
   }
 };
 
@@ -41,51 +39,24 @@ export const getTecnoempleoJobs = async (req, res) => {
   }
 };
 
-// InfoJobs scraper
-export const getInfojobsJobs = async (req, res) => {
-  try {
-    const { keyword, location } = req.query;
-    if (!keyword) return res.status(400).json({ error: 'Se requiere keyword' });
-
-    const jobs = await scrapeInfojobs(keyword, location || '');
-    res.json({ jobs, hits: jobs.length, source: 'InfoJobs' });
-  } catch (error) {
-    console.error('InfoJobs controller error:', error.message);
-    res.status(500).json({ error: 'Error al obtener empleos de InfoJobs', details: error.message });
-  }
-};
-
-// Indeed España scraper
-export const getIndeedSpainJobs = async (req, res) => {
-  try {
-    const { keyword, location } = req.query;
-    if (!keyword) return res.status(400).json({ error: 'Se requiere keyword' });
-
-    const jobs = await scrapeIndeedSpain(keyword, location || 'España');
-    res.json({ jobs, hits: jobs.length, source: 'Indeed España' });
-  } catch (error) {
-    console.error('Indeed Spain controller error:', error.message);
-    res.status(500).json({ error: 'Error al obtener empleos de Indeed España', details: error.message });
-  }
-};
-
-// Agregador: busca en todas las fuentes a la vez
+// Agregador: Tecnoempleo + Careerjet
 export const getAllSpainJobs = async (req, res) => {
   try {
     const { keyword, location } = req.query;
     if (!keyword) return res.status(400).json({ error: 'Se requiere keyword' });
 
+    const user_ip = req.ip || '11.22.33.44';
+
     const results = await Promise.allSettled([
       scrapeTecnoempleo(keyword, location || ''),
-      scrapeInfojobs(keyword, location || ''),
-      scrapeIndeedSpain(keyword, location || 'España'),
+      getJobsFromCareerjetSpain(keyword, location || 'España', user_ip, 1)
+        .then(data => data.jobs || []),
     ]);
 
     const jobs = results
       .filter((r) => r.status === 'fulfilled')
       .flatMap((r) => r.value);
 
-    // Sort by source for consistency
     const sourcesAvailable = [...new Set(jobs.map((j) => j.source))];
 
     res.json({

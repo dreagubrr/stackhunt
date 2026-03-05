@@ -6,8 +6,6 @@ import JobCard from "../components/JobCard";
 const SOURCES = [
   { value: "spain-all", label: "🇪🇸 Todas las fuentes" },
   { value: "tecnoempleo", label: "💻 Tecnoempleo" },
-  { value: "infojobs", label: "📋 InfoJobs" },
-  { value: "indeed-es", label: "🔍 Indeed España" },
   { value: "careerjet-es", label: "🌐 Careerjet España" },
 ];
 
@@ -42,7 +40,7 @@ const Search = () => {
     if (currentFilters.salaryMin) {
       const minSalary = parseInt(currentFilters.salaryMin);
       result = result.filter((job) => {
-        if (!job.salary) return false;
+        if (!job.salary || job.salary === "No especificado") return false;
         const salaryNumbers = job.salary.match(/\d+/g);
         if (salaryNumbers && salaryNumbers.length > 0) {
           return parseInt(salaryNumbers[0]) >= minSalary;
@@ -148,7 +146,7 @@ const Search = () => {
           Buscar Empleos en España
         </h2>
         <p className="text-gray-500 mb-8 text-center md:text-left">
-          Ofertas en tiempo real de InfoJobs, Tecnoempleo, Indeed España y más
+          Ofertas en tiempo real de Tecnoempleo y Careerjet España
         </p>
 
         <form onSubmit={handleSearch} className="bg-white p-6 rounded-lg shadow-sm mb-6">
@@ -217,20 +215,9 @@ const Search = () => {
                 >
                   <option value="date">Más reciente</option>
                   <option value="title">Título del puesto</option>
-                  <option value="salary">Mayor salario</option>
                   <option value="company">Empresa</option>
                   <option value="source">Fuente</option>
                 </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Salario mínimo (€)</label>
-                <input
-                  type="number"
-                  placeholder="ej. 25000"
-                  value={filters.salaryMin}
-                  onChange={(e) => setFilters({ ...filters, salaryMin: e.target.value })}
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                />
               </div>
               {activeSources.length > 1 && (
                 <div className="flex items-end">
