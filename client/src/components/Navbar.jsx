@@ -29,10 +29,10 @@ const TypewriterLogo = () => {
   return (
     <span
       style={{ fontFamily: "'Press Start 2P', monospace", fontSize: '1rem', letterSpacing: '0.05em' }}
-      className="text-blue-600"
+      className="text-gray-600"
     >
       {displayed}
-      <span className="text-blue-400" style={{ opacity: showCursor ? 1 : 0 }}>_</span>
+      <span className="text-gray-400" style={{ opacity: showCursor ? 1 : 0 }}>_</span>
     </span>
   );
 };
