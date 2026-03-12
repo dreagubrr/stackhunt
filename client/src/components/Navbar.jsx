@@ -29,7 +29,7 @@ const TypewriterLogo = () => {
   return (
     <span
       style={{ fontFamily: "'Press Start 2P', monospace", fontSize: '1rem', letterSpacing: '0.05em' }}
-      className="text-gray-600"
+      className="text-gray-400"
     >
       {displayed}
       <span className="text-gray-400" style={{ opacity: showCursor ? 1 : 0 }}>_</span>
@@ -41,7 +41,7 @@ const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const linkClass = ({ isActive }) =>
-    isActive ? 'text-blue-600 font-semibold' : 'text-gray-700 hover:text-blue-600 transition';
+    isActive ? 'text-gray-700 font-semibold' : 'text-gray-500 hover:text-gray-700 transition';
 
   return (
     <>
