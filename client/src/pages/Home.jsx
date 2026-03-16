@@ -12,8 +12,12 @@ const Home = () => {
         className="flex flex-col-reverse md:flex-row items-center max-w-7xl mx-auto px-6 py-16 gap-12"
       >
         <div className="md:w-1/2 text-center md:text-left">
-          <h1 className="text-5xl font-extrabold text-blue-700 mb-6">
-            Encuentra tu próximo empleo en España
+          <h1 className="text-5xl font-extrabold text-gray-700 mb-6">
+            if(StackHunt){
+               getJob()
+              } else {
+                keepSuffering()
+                 }
           </h1>
           <p className="text-gray-700 mb-8 text-lg max-w-md mx-auto md:mx-0">
             Ofertas de trabajo en tiempo real de InfoJobs, Tecnoempleo, Indeed España y Careerjet.

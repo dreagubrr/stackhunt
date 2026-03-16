@@ -41,7 +41,7 @@ const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const linkClass = ({ isActive }) =>
-    isActive ? 'text-gray-700 font-semibold' : 'text-gray-500 hover:text-gray-700 transition';
+    isActive ? 'text-gray-500 font-semibold' : 'text-gray-700 hover:text-gray-500 transition';
 
   return (
     <>
