@@ -1,3 +1,9 @@
+import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+
+const API = process.env.REACT_APP_API_BASE_URL;
+
 const SOURCE_COLORS = {
   'Tecnoempleo': 'bg-green-100 text-green-700',
   'InfoJobs': 'bg-yellow-100 text-yellow-700',
@@ -6,12 +12,51 @@ const SOURCE_COLORS = {
 };
 
 const JobCard = ({ job }) => {
+  const { user, updateSavedJobs } = useAuth();
+  const navigate = useNavigate();
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(
+    () => user?.savedJobs?.some((j) => j.url === job.link) || false
+  );
+
   const formatDate = (dateString) => {
     if (!dateString || dateString === 'Reciente') return 'Reciente';
     try {
       return new Date(dateString).toLocaleDateString('es-ES');
     } catch {
       return dateString;
+    }
+  };
+
+  const handleSave = async () => {
+    if (!user) return navigate('/login');
+    if (saved) return navigate('/profile');
+
+    setSaving(true);
+    try {
+      const res = await fetch(`${API}/api/users/saved-jobs`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({
+          title: job.title,
+          company: job.company,
+          location: Array.isArray(job.location) ? job.location.join(', ') : job.location,
+          url: job.link,
+          source: job.source,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        updateSavedJobs(data);
+        setSaved(true);
+      }
+    } catch (err) {
+      console.error('Error al guardar oferta:', err);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -65,15 +110,27 @@ const JobCard = ({ job }) => {
         </div>
       </div>
 
-      <div className="mt-4">
+      <div className="mt-4 flex gap-2">
         <a
           href={job.link}
           target="_blank"
           rel="noopener noreferrer"
-          className="block text-center bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition"
+          className="flex-1 block text-center bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition"
         >
           Ver oferta →
         </a>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          title={saved ? 'Ver guardados' : 'Guardar oferta'}
+          className={`px-3 py-2 rounded-lg text-sm font-medium transition border ${
+            saved
+              ? 'bg-yellow-50 border-yellow-300 text-yellow-600 hover:bg-yellow-100'
+              : 'bg-white border-gray-300 text-gray-500 hover:border-blue-400 hover:text-blue-600'
+          }`}
+        >
+          {saved ? '★' : '☆'}
+        </button>
       </div>
     </div>
   );

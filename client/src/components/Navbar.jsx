@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const LOGO_TEXT = 'StackHunt';
 
@@ -18,7 +19,6 @@ const TypewriterLogo = () => {
     }
   }, [charIndex]);
 
-  // Blinking cursor
   useEffect(() => {
     const interval = setInterval(() => {
       setShowCursor(prev => !prev);
@@ -29,7 +29,7 @@ const TypewriterLogo = () => {
   return (
     <span
       style={{ fontFamily: "'Press Start 2P', monospace", fontSize: '1rem', letterSpacing: '0.05em' }}
-      className="text-gray-400"
+      className="text-gray-600"
     >
       {displayed}
       <span className="text-gray-400" style={{ opacity: showCursor ? 1 : 0 }}>_</span>
@@ -39,9 +39,17 @@ const TypewriterLogo = () => {
 
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   const linkClass = ({ isActive }) =>
-    isActive ? 'text-gray-500 font-semibold' : 'text-gray-700 hover:text-gray-500 transition';
+    isActive ? 'text-blue-600 font-semibold' : 'text-gray-700 hover:text-blue-600 transition';
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+    setMenuOpen(false);
+  };
 
   return (
     <>
@@ -56,11 +64,37 @@ const Navbar = () => {
           </NavLink>
 
           {/* Desktop links */}
-          <ul className="hidden md:flex space-x-6 text-sm font-medium">
+          <ul className="hidden md:flex items-center space-x-6 text-sm font-medium">
             <li><NavLink to="/" className={linkClass}>Inicio</NavLink></li>
             <li><NavLink to="/search" className={linkClass}>Buscar Empleo</NavLink></li>
             <li><NavLink to="/about" className={linkClass}>Sobre nosotros</NavLink></li>
             <li><NavLink to="/contact" className={linkClass}>Contacto</NavLink></li>
+            {user ? (
+              <>
+                <li>
+                  <NavLink to="/profile" className={linkClass}>
+                    {user.name.split(' ')[0]}
+                  </NavLink>
+                </li>
+                <li>
+                  <button
+                    onClick={handleLogout}
+                    className="text-red-500 hover:text-red-700 transition"
+                  >
+                    Salir
+                  </button>
+                </li>
+              </>
+            ) : (
+              <li>
+                <NavLink
+                  to="/login"
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                >
+                  Entrar
+                </NavLink>
+              </li>
+            )}
           </ul>
 
           {/* Mobile hamburger */}
@@ -86,6 +120,14 @@ const Navbar = () => {
               <li><NavLink to="/search" className={linkClass} onClick={() => setMenuOpen(false)}>Buscar Empleo</NavLink></li>
               <li><NavLink to="/about" className={linkClass} onClick={() => setMenuOpen(false)}>Sobre nosotros</NavLink></li>
               <li><NavLink to="/contact" className={linkClass} onClick={() => setMenuOpen(false)}>Contacto</NavLink></li>
+              {user ? (
+                <>
+                  <li><NavLink to="/profile" className={linkClass} onClick={() => setMenuOpen(false)}>Mi perfil</NavLink></li>
+                  <li><button onClick={handleLogout} className="text-red-500 hover:text-red-700 transition text-left">Cerrar sesión</button></li>
+                </>
+              ) : (
+                <li><NavLink to="/login" className={linkClass} onClick={() => setMenuOpen(false)}>Entrar</NavLink></li>
+              )}
             </ul>
           </div>
         )}
