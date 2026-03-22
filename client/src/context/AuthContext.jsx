@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState } from 'react';
 
 const AuthContext = createContext();
 
@@ -19,10 +19,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updateSavedJobs = (savedJobs) => {
-    const updated = { ...user, savedJobs };
-    localStorage.setItem('stackhunt_user', JSON.stringify(updated));
-    setUser(updated);
-  };
+  if (!user) return; 
+
+  const updated = { ...user, savedJobs };
+  localStorage.setItem('stackhunt_user', JSON.stringify(updated));
+  setUser(updated);
+};
 
   return (
     <AuthContext.Provider value={{ user, login, logout, updateSavedJobs }}>

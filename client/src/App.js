@@ -12,10 +12,12 @@ import Register from './pages/Register';
 import Profile from './pages/Profile';
 import { AuthProvider } from './context/AuthContext';
 
+import AuthCallback from './pages/AuthCallback';
+
 function App() {
   return (
-    <AuthProvider>
-      <Router>
+    <Router>
+      <AuthProvider>
         <div className="min-h-screen flex flex-col">
           <Navbar />
           <main className="flex-grow p-4">
@@ -28,13 +30,14 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
           <Footer />
         </div>
-      </Router>
-    </AuthProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 

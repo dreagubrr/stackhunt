@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const LOGO_TEXT = 'StackHunt';
@@ -40,15 +40,15 @@ const TypewriterLogo = () => {
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
+
 
   const linkClass = ({ isActive }) =>
     isActive ? 'text-blue-600 font-semibold' : 'text-gray-700 hover:text-blue-600 transition';
 
   const handleLogout = () => {
     logout();
-    navigate('/');
     setMenuOpen(false);
+    window.location.href = '/';
   };
 
   return (
