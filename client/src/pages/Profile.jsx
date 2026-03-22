@@ -38,7 +38,7 @@ const Profile = () => {
     if (activeTab === 'repos' && user?.githubUsername) {
       loadRepos();
     }
-  }, [activeTab, user]);
+  }, [activeTab, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!user) return <Navigate to="/" />;
 

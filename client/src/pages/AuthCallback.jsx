@@ -30,7 +30,7 @@ const AuthCallback = () => {
         navigate('/login?error=parse');
       }
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="min-h-screen flex items-center justify-center">
