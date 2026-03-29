@@ -6,7 +6,7 @@ import User from '../models/User.js';
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: '/api/auth/google/callback',
+  callbackURL: 'https://api.stackhuntproject.com/api/auth/google/callback',
 }, async (accessToken, refreshToken, profile, done) => {
   try {
     let user = await User.findOne({ googleId: profile.id });
@@ -37,7 +37,7 @@ passport.use(new GoogleStrategy({
 passport.use(new GitHubStrategy({
   clientID: process.env.GITHUB_CLIENT_ID,
   clientSecret: process.env.GITHUB_CLIENT_SECRET,
-  callbackURL: '/api/auth/github/callback',
+  callbackURL: 'https://api.stackhuntproject.com/api/auth/github/callback',
   scope: ['user:email', 'public_repo'],
 }, async (accessToken, refreshToken, profile, done) => {
   try {
