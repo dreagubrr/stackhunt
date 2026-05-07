@@ -12,8 +12,22 @@ const s3 = new S3Client({
 const BUCKET = process.env.AWS_S3_BUCKET;
 
 // Upload file buffer to S3
-export const uploadToS3 = async (buffer, filename, mimetype) => {
-  const key = `cvs/${Date.now()}-${filename}`;
+export const uploadToS3 = async (buffer, filename, mimetype, folder = 'cvs') => {
+  const key = `${folder}/${Date.now()}-${filename}`;
+  await s3.send(new PutObjectCommand({
+    Bucket: BUCKET,
+    Key: key,
+    Body: buffer,
+    ContentType: mimetype,
+  }));
+  return key;
+};
+
+// Upload avatar to S3 (no ACL — uses signed URLs)
+export const uploadAvatarToS3 = async (base64Data, mimetype, userId) => {
+  const ext = mimetype.split('/')[1] || 'jpg';
+  const key = `avatars/${userId}-${Date.now()}.${ext}`;
+  const buffer = Buffer.from(base64Data, 'base64');
 
   await s3.send(new PutObjectCommand({
     Bucket: BUCKET,
@@ -22,7 +36,10 @@ export const uploadToS3 = async (buffer, filename, mimetype) => {
     ContentType: mimetype,
   }));
 
-  return key;
+  // Return signed URL valid for 7 days
+  const command = new GetObjectCommand({ Bucket: BUCKET, Key: key });
+  const url = await getSignedUrl(s3, command, { expiresIn: 604800 });
+  return { key, url };
 };
 
 // Delete file from S3
@@ -37,4 +54,10 @@ export const deleteFromS3 = async (key) => {
 export const getSignedDownloadUrl = async (key) => {
   const command = new GetObjectCommand({ Bucket: BUCKET, Key: key });
   return await getSignedUrl(s3, command, { expiresIn: 3600 });
+};
+
+// Refresh avatar signed URL (valid 7 days)
+export const getSignedAvatarUrl = async (key) => {
+  const command = new GetObjectCommand({ Bucket: BUCKET, Key: key });
+  return await getSignedUrl(s3, command, { expiresIn: 604800 });
 };

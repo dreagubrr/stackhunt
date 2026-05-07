@@ -24,7 +24,8 @@ const AuthCallback = () => {
     if (data) {
       try {
         const user = JSON.parse(decodeURIComponent(data));
-        login(user);
+        // OAuth logins don't ask "remember me" — use sessionStorage by default
+        login(user, false);
         navigate('/profile');
       } catch {
         navigate('/login?error=parse');

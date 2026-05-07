@@ -11,7 +11,7 @@ const generateToken = (id) =>
 
 const CLIENT_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
-// Email/password
+// correo y contraseña
 router.post('/register', register);
 router.post('/login', login);
 router.get('/me', protect, getMe);
@@ -35,7 +35,7 @@ router.get('/google/callback',
   }
 );
 
-// GitHub OAuth (login/register)
+// GitHub OAuth (login/registrase)
 router.get('/github', passport.authenticate('github', { scope: ['user:email', 'public_repo'] }));
 
 // GitHub OAuth (vincular cuenta existente)
@@ -48,7 +48,7 @@ router.get('/github/link', (req, res, next) => {
   })(req, res, next);
 });
 
-// GitHub callback — handles both login and link
+// callback a git 
 router.get('/github/callback',
   passport.authenticate('github', { session: false, failureRedirect: `${CLIENT_URL}/login?error=github` }),
   async (req, res) => {

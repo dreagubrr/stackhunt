@@ -1,66 +1,72 @@
 import { motion } from 'framer-motion';
 
 const Contact = () => {
+  const inputStyle = {
+    border: '1px solid #e5e7eb', borderRadius: '10px', color: '#0a0a0a',
+    width: '100%', padding: '10px 14px', fontSize: '0.875rem',
+    outline: 'none', fontFamily: "'Inter', sans-serif", background: '#fff',
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center px-4 py-16">
-      <motion.section
-        initial={{ opacity: 0, y: -20 }}
+    <div style={{ fontFamily: "'Inter', sans-serif", background: '#f7f6f3', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '80px 24px' }}>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+      <div style={{
+        position: 'fixed', top: '10%', right: '5%',
+        width: '350px', height: '350px',
+        background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)',
+        borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none',
+      }} />
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="max-w-xl w-full bg-white shadow-md rounded-lg px-8 py-10"
+        style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #e5e7eb', padding: '40px', width: '100%', maxWidth: '520px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
       >
-        <h2 className="text-3xl font-bold text-blue-700 mb-2 text-center">Contacto</h2>
-        <p className="text-gray-500 text-center mb-6 text-sm">
-          ¿Tienes alguna duda, sugerencia o has encontrado un error? Escríbenos.
-        </p>
+        <div style={{ marginBottom: '28px' }}>
+          <h2 style={{ fontWeight: 800, fontSize: '1.8rem', letterSpacing: '-0.03em', color: '#0a0a0a', marginBottom: '8px' }}>
+            Contacto
+          </h2>
+          <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>
+            ¿Tienes alguna duda o sugerencia? Escríbenos.
+          </p>
+        </div>
 
         <form
           action="https://formsubmit.co/tu-email@ejemplo.com"
           method="POST"
-          className="space-y-4"
+          style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
         >
           <input type="hidden" name="_captcha" value="false" />
-          <input type="hidden" name="_next" value={`${window.location.origin}/gracias`} />
-          <input type="hidden" name="_subject" value="Nuevo mensaje desde Job Miner España" />
+          <input type="hidden" name="_subject" value="Nuevo mensaje desde StackHunt" />
+
+          {[
+            { label: 'Nombre', name: 'name', type: 'text', placeholder: 'Tu nombre completo' },
+            { label: 'Correo electrónico', name: 'email', type: 'email', placeholder: 'tu@email.com' },
+          ].map(({ label, name, type, placeholder }) => (
+            <div key={name}>
+              <label style={{ color: '#374151', fontSize: '0.8rem', fontWeight: 500, display: 'block', marginBottom: '6px' }}>{label}</label>
+              <input type={type} name={name} required placeholder={placeholder} style={inputStyle}
+                onFocus={e => e.target.style.boxShadow = '0 0 0 2px #6366f1'}
+                onBlur={e => e.target.style.boxShadow = 'none'} />
+            </div>
+          ))}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
-            <input
-              type="text"
-              name="name"
-              required
-              placeholder="Tu nombre completo"
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <label style={{ color: '#374151', fontSize: '0.8rem', fontWeight: 500, display: 'block', marginBottom: '6px' }}>Mensaje</label>
+            <textarea name="message" rows="5" required placeholder="Escribe tu mensaje aquí..."
+              style={{ ...inputStyle, resize: 'none' }}
+              onFocus={e => e.target.style.boxShadow = '0 0 0 2px #6366f1'}
+              onBlur={e => e.target.style.boxShadow = 'none'} />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Correo electrónico</label>
-            <input
-              type="email"
-              name="email"
-              required
-              placeholder="tu@email.com"
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Mensaje</label>
-            <textarea
-              name="message"
-              rows="5"
-              required
-              placeholder="Escribe tu mensaje aquí..."
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            ></textarea>
-          </div>
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white font-semibold py-3 rounded-md hover:bg-blue-700 transition"
-          >
-            Enviar mensaje
+
+          <button type="submit"
+            style={{ background: '#0a0a0a', color: '#fff', borderRadius: '10px', padding: '12px', fontWeight: 600, cursor: 'pointer', border: 'none', fontSize: '0.875rem', marginTop: '4px' }}>
+            Enviar mensaje →
           </button>
         </form>
-      </motion.section>
+      </motion.div>
     </div>
   );
 };

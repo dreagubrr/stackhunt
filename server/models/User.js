@@ -19,6 +19,7 @@ const userSchema = new mongoose.Schema({
     minlength: 6,
   },
   avatar: { type: String },
+  avatarKey: { type: String },  // S3 key para el avatar
 
   // OAuth
   googleId: { type: String },
@@ -26,10 +27,24 @@ const userSchema = new mongoose.Schema({
   githubUsername: { type: String },
   githubToken: { type: String },
 
-  // CV stored in AWS S3
+  // Información del perfil
+  profile: {
+    title: { type: String, trim: true },        // "Desarrollador Frontend"
+    location: { type: String, trim: true },     // "Madrid, España"
+    bio: { type: String, trim: true },          // descripción corta
+    experience: { type: Number },               // años de experiencia
+    skills: [{ type: String, trim: true }],     // ["React", "Node.js", ...]
+    links: {
+      linkedin: { type: String, trim: true },
+      portfolio: { type: String, trim: true },
+      github: { type: String, trim: true },
+    },
+  },
+
+  // CV almacenado en AWS S3
   cv: {
     filename: String,
-    key: String,       // S3 object key
+    key: String,
     uploadedAt: Date,
   },
 
@@ -45,14 +60,12 @@ const userSchema = new mongoose.Schema({
   ],
 }, { timestamps: true });
 
-// Hash password before saving (only if set)
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password') || !this.password) return next();
   this.password = await bcrypt.hash(this.password, 10);
   next();
 });
 
-// Compare password
 userSchema.methods.matchPassword = async function (enteredPassword) {
   if (!this.password) return false;
   return await bcrypt.compare(enteredPassword, this.password);

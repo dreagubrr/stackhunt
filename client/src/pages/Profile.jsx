@@ -1,43 +1,102 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Navigate } from 'react-router-dom';
+import { Doughnut } from 'react-chartjs-2';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 const API = process.env.REACT_APP_API_BASE_URL;
 
+const SKILL_SUGGESTIONS = [
+  'JavaScript', 'TypeScript', 'React', 'Vue', 'Angular', 'Node.js', 'Python',
+  'Java', 'PHP', 'C#', '.NET', 'SQL', 'MongoDB', 'Docker', 'AWS', 'Git',
+  'Flutter', 'Kotlin', 'Swift', 'GraphQL', 'REST API', 'Linux', 'DevOps',
+];
+
+const inputStyle = {
+  border: '1px solid #e5e7eb', borderRadius: '10px', color: '#0a0a0a',
+  width: '100%', padding: '10px 14px', fontSize: '0.875rem',
+  outline: 'none', fontFamily: "'Inter', sans-serif",
+};
+
+const cardStyle = {
+  background: '#ffffff', borderRadius: '16px', border: '1px solid #e5e7eb',
+  padding: '24px', marginBottom: '0',
+};
+
 const Profile = () => {
-  const { user, logout, updateSavedJobs } = useAuth();
+  const { user, logout, updateSavedJobs, login, updateGithubValidatedSkills } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef();
+  const avatarInputRef = useRef();
 
   const [repos, setRepos] = useState([]);
+  const [analysis, setAnalysis] = useState(null);
   const [loadingRepos, setLoadingRepos] = useState(false);
   const [reposError, setReposError] = useState('');
   const [uploadingCV, setUploadingCV] = useState(false);
   const [cvMessage, setCvMessage] = useState('');
-  const [activeTab, setActiveTab] = useState('jobs');
+  const [activeTab, setActiveTab] = useState('profile');
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileMessage, setProfileMessage] = useState('');
+  const [skillInput, setSkillInput] = useState('');
+  const [editMode, setEditMode] = useState(false);
+  const [avatarSrc, setAvatarSrc] = useState(user?.avatar || null);
+  const [analyzingCV, setAnalyzingCV] = useState(false);
+  const [cvAnalysisResult, setCvAnalysisResult] = useState(null);
+
+  const [profileForm, setProfileForm] = useState({
+    title: '', location: '', bio: '', experience: '', skills: [],
+    links: { linkedin: '', portfolio: '', github: '' },
+  });
+
+  useEffect(() => {
+    if (!user) return;
+    setAvatarSrc(user.avatar || null);
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch(`${API}/api/users/profile`, { headers: { Authorization: `Bearer ${user.token}` } });
+        const data = await res.json();
+        if (data.profile) {
+          setProfileForm({
+            title: data.profile.title || '', location: data.profile.location || '',
+            bio: data.profile.bio || '', experience: data.profile.experience || '',
+            skills: data.profile.skills || [],
+            links: {
+              linkedin: data.profile.links?.linkedin || '',
+              portfolio: data.profile.links?.portfolio || '',
+              github: data.profile.links?.github || '',
+            },
+          });
+        }
+      } catch (err) { console.error('Error loading profile:', err); }
+    };
+    fetchProfile();
+  }, [user]);
 
   const loadRepos = async () => {
     if (!user) return;
-    setLoadingRepos(true);
-    setReposError('');
+    setLoadingRepos(true); setReposError('');
     try {
-      const res = await fetch(`${API}/api/users/github-repos`, {
-        headers: { Authorization: `Bearer ${user.token}` },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-      setRepos(data);
-    } catch (err) {
-      setReposError(err.message);
-    } finally {
-      setLoadingRepos(false);
-    }
+      const [reposRes, analysisRes] = await Promise.all([
+        fetch(`${API}/api/users/github-repos`, { headers: { Authorization: `Bearer ${user.token}` } }),
+        fetch(`${API}/api/users/github-analysis`, { headers: { Authorization: `Bearer ${user.token}` } }),
+      ]);
+      const reposData = await reposRes.json();
+      if (!reposRes.ok) throw new Error(reposData.message);
+      setRepos(reposData);
+      const analysisData = await analysisRes.json();
+      if (analysisRes.ok) {
+        setAnalysis(analysisData);
+        if (analysisData.validatedSkills) updateGithubValidatedSkills(analysisData.validatedSkills);
+      }
+    } catch (err) { setReposError(err.message); }
+    finally { setLoadingRepos(false); }
   };
 
   useEffect(() => {
-    if (activeTab === 'repos' && user?.githubUsername) {
-      loadRepos();
-    }
+    if (activeTab === 'repos' && user?.githubUsername) loadRepos();
   }, [activeTab, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!user) return <Navigate to="/" />;
@@ -46,174 +105,425 @@ const Profile = () => {
 
   const handleRemove = async (jobId) => {
     try {
-      const res = await fetch(`${API}/api/users/saved-jobs/${jobId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${user.token}` },
-      });
-      const data = await res.json();
-      updateSavedJobs(data);
-    } catch (err) {
-      console.error('Error al eliminar oferta:', err);
-    }
+      const res = await fetch(`${API}/api/users/saved-jobs/${jobId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${user.token}` } });
+      updateSavedJobs(await res.json());
+    } catch (err) { console.error(err); }
   };
 
-  const handleCVUpload = async (e) => {
+  const handleAvatarUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      setCvMessage('El archivo no puede superar 5MB');
-      return;
-    }
-
-    setUploadingCV(true);
-    setCvMessage('');
-
+    if (file.size > 2 * 1024 * 1024) { setProfileMessage('La imagen no puede superar 2MB'); return; }
     const reader = new FileReader();
     reader.onload = async () => {
       const base64 = reader.result.split(',')[1];
       try {
+        const res = await fetch(`${API}/api/users/profile`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` },
+          body: JSON.stringify({ avatar: base64, avatarMimetype: file.type }),
+        });
+        const data = await res.json();
+        if (res.ok && data.avatar) {
+          setAvatarSrc(data.avatar);
+          const isLocal = !!localStorage.getItem('stackhunt_user');
+          const stored = isLocal ? JSON.parse(localStorage.getItem('stackhunt_user')) : JSON.parse(sessionStorage.getItem('stackhunt_user'));
+          const updatedUser = { ...stored, avatar: data.avatar };
+          if (isLocal) localStorage.setItem('stackhunt_user', JSON.stringify(updatedUser));
+          else sessionStorage.setItem('stackhunt_user', JSON.stringify(updatedUser));
+          setProfileMessage('✅ Foto actualizada');
+        } else setProfileMessage('❌ Error al subir la foto');
+      } catch { setProfileMessage('❌ Error al subir la foto'); }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleProfileSave = async () => {
+    setSavingProfile(true); setProfileMessage('');
+    try {
+      const res = await fetch(`${API}/api/users/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` },
+        body: JSON.stringify({ ...profileForm, experience: profileForm.experience ? parseInt(profileForm.experience) : undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      login({ ...user, profile: { ...profileForm } }, !!localStorage.getItem('stackhunt_user'));
+      setProfileMessage('✅ Perfil guardado correctamente');
+      setEditMode(false);
+    } catch (err) { setProfileMessage(`❌ ${err.message}`); }
+    finally { setSavingProfile(false); }
+  };
+
+  const handleCancelEdit = () => { setEditMode(false); setProfileMessage(''); };
+  const handleAddSkill = (skill) => {
+    const s = skill.trim();
+    if (s && !profileForm.skills.includes(s)) setProfileForm({ ...profileForm, skills: [...profileForm.skills, s] });
+    setSkillInput('');
+  };
+  const handleRemoveSkill = (skill) => setProfileForm({ ...profileForm, skills: profileForm.skills.filter(s => s !== skill) });
+
+  const handleCVUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setCvMessage('El archivo no puede superar 5MB'); return; }
+    setUploadingCV(true); setCvMessage('');
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
         const res = await fetch(`${API}/api/users/cv`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${user.token}`,
-          },
-          body: JSON.stringify({
-            filename: file.name,
-            data: base64,
-            mimetype: file.type,
-          }),
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` },
+          body: JSON.stringify({ filename: file.name, data: reader.result.split(',')[1], mimetype: file.type }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message);
         setCvMessage('✅ CV subido correctamente');
-      } catch (err) {
-        setCvMessage(`❌ Error: ${err.message}`);
-      } finally {
-        setUploadingCV(false);
-      }
+      } catch (err) { setCvMessage(`❌ Error: ${err.message}`); }
+      finally { setUploadingCV(false); }
     };
     reader.readAsDataURL(file);
   };
 
   const handleDownloadCV = async () => {
     try {
-      const res = await fetch(`${API}/api/users/cv/download`, {
-        headers: { Authorization: `Bearer ${user.token}` },
-      });
+      const res = await fetch(`${API}/api/users/cv/download`, { headers: { Authorization: `Bearer ${user.token}` } });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
       window.open(data.url, '_blank');
-    } catch (err) {
-      setCvMessage(`❌ ${err.message}`);
-    }
+    } catch (err) { setCvMessage(`❌ ${err.message}`); }
   };
 
   const handleDeleteCV = async () => {
     try {
-      await fetch(`${API}/api/users/cv`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${user.token}` },
-      });
+      await fetch(`${API}/api/users/cv`, { method: 'DELETE', headers: { Authorization: `Bearer ${user.token}` } });
       setCvMessage('CV eliminado');
-    } catch {
-      setCvMessage('Error al eliminar el CV');
-    }
+    } catch { setCvMessage('Error al eliminar el CV'); }
+  };
+
+  const handleAnalyzeCV = async () => {
+    setAnalyzingCV(true); setCvMessage(''); setCvAnalysisResult(null);
+    try {
+      const res = await fetch(`${API}/api/users/cv/analyze`, { method: 'POST', headers: { Authorization: `Bearer ${user.token}` } });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      setCvAnalysisResult(data.extracted);
+      setProfileForm(prev => ({
+        ...prev,
+        bio: data.extracted.bio || prev.bio,
+        experience: data.extracted.experience ?? prev.experience,
+        skills: data.profile.skills || prev.skills,
+      }));
+      await fetch(`${API}/api/users/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` },
+        body: JSON.stringify({ bio: data.extracted.bio, experience: data.extracted.experience, skills: data.profile.skills }),
+      });
+      setCvMessage('✅ CV analizado correctamente');
+    } catch (err) { setCvMessage(`❌ Error: ${err.message}`); }
+    finally { setAnalyzingCV(false); }
   };
 
   const tabs = [
+    { id: 'profile', label: 'Mi perfil' },
     { id: 'jobs', label: `Ofertas guardadas (${user.savedJobs?.length || 0})` },
-    { id: 'cv', label: 'Mi CV' },
-    ...(user.githubUsername ? [{ id: 'repos', label: 'Mis repositorios' }] : []),
+    ...(user.githubUsername ? [{ id: 'repos', label: 'GitHub' }] : []),
   ];
 
+  const doughnutData = analysis ? {
+    labels: analysis.languages.slice(0, 6).map(l => l.name),
+    datasets: [{ data: analysis.languages.slice(0, 6).map(l => l.percent), backgroundColor: ['#6366f1', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'], borderWidth: 2, borderColor: '#ffffff' }]
+  } : null;
+
+  const doughnutOptions = {
+    responsive: true, maintainAspectRatio: true,
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 12, usePointStyle: true } },
+      tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${ctx.parsed}%` } }
+    },
+    cutout: '65%',
+  };
+
+  const infoBanner = (icon, title, desc) => (
+    <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '12px', padding: '14px 16px' }}>
+      <p style={{ color: '#4338ca', fontWeight: 600, fontSize: '0.875rem', marginBottom: '4px' }}>{icon} {title}</p>
+      <p style={{ color: '#6366f1', fontSize: '0.75rem', lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: desc }} />
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white px-4 py-12">
-      <div className="max-w-3xl mx-auto">
+    <div style={{ fontFamily: "'Inter', sans-serif", background: '#f7f6f3', minHeight: '100vh', paddingTop: '80px', paddingBottom: '48px' }}>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+      <div style={{ maxWidth: '720px', margin: '0 auto', padding: '0 24px' }}>
 
         {/* Header */}
-        <div className="bg-white rounded-2xl shadow-md p-6 mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            {user.avatar ? (
-              <img src={user.avatar} alt={user.name} className="w-12 h-12 rounded-full object-cover" />
-            ) : (
-              <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg">
-                {user.name[0].toUpperCase()}
+        <div style={cardStyle} className="mb-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="relative group cursor-pointer" onClick={() => avatarInputRef.current.click()}>
+                {avatarSrc ? (
+                  <img src={avatarSrc} alt={user.name} style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover' }} />
+                ) : (
+                  <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6366f1', fontWeight: 700, fontSize: '1.5rem' }}>
+                    {user.name[0].toUpperCase()}
+                  </div>
+                )}
+                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s' }}
+                  className="group-hover:opacity-100">
+                  <span style={{ color: '#fff', fontSize: '0.7rem' }}>Cambiar</span>
+                </div>
+                <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
               </div>
-            )}
-            <div>
-              <h2 className="text-xl font-bold text-gray-800">{user.name}</h2>
-              <p className="text-gray-500 text-sm">{user.email}</p>
-              {user.githubUsername ? (
-                <a
-                  href={`https://github.com/${user.githubUsername}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-gray-400 hover:text-gray-600"
-                >
-                  @{user.githubUsername}
-                </a>
-              ) : (
-                <a
-                  href={`${API}/api/auth/github/link?token=${user.token}`}
-                  className="text-xs text-blue-500 hover:text-blue-700 font-medium flex items-center gap-1 mt-1"
-                >
-                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
-                  </svg>
-                  Conectar GitHub
-                </a>
-              )}
+              <div>
+                <h2 style={{ fontWeight: 700, fontSize: '1.1rem', color: '#0a0a0a', letterSpacing: '-0.01em' }}>{user.name}</h2>
+                <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>{user.email}</p>
+                {profileForm.title && !editMode && <p style={{ color: '#6366f1', fontSize: '0.75rem', fontWeight: 600, marginTop: '2px' }}>{profileForm.title}</p>}
+                {user.githubUsername ? (
+                  <a href={`https://github.com/${user.githubUsername}`} target="_blank" rel="noopener noreferrer"
+                    style={{ color: '#9ca3af', fontSize: '0.75rem' }}>@{user.githubUsername}</a>
+                ) : (
+                  <a href={`${API}/api/auth/github/link?token=${user.token}`}
+                    style={{ color: '#6366f1', fontSize: '0.75rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                    Conectar GitHub
+                  </a>
+                )}
+              </div>
             </div>
+            <button onClick={handleLogout} style={{ color: '#ef4444', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer', background: 'none', border: 'none' }}>
+              Cerrar sesión
+            </button>
           </div>
-          <button onClick={handleLogout} className="text-sm text-red-500 hover:text-red-700 font-medium transition">
-            Cerrar sesión
-          </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6 border-b border-gray-200">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`pb-3 px-1 text-sm font-medium border-b-2 transition ${
-                activeTab === tab.id
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
+        <div style={{ borderBottom: '1px solid #e5e7eb', marginBottom: '20px', display: 'flex', gap: '4px', overflowX: 'auto' }}>
+          {tabs.map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
+              paddingBottom: '12px', paddingLeft: '4px', paddingRight: '4px',
+              fontSize: '0.875rem', fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer',
+              background: 'none', border: 'none', borderBottom: activeTab === tab.id ? '2px solid #6366f1' : '2px solid transparent',
+              color: activeTab === tab.id ? '#6366f1' : '#6b7280', transition: 'color 0.2s',
+            }}>
               {tab.label}
             </button>
           ))}
         </div>
 
-        {/* Saved Jobs */}
+        {/* Profile Tab */}
+        {activeTab === 'profile' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {infoBanner('💡', '¿Para qué sirve completar tu perfil?', 'Cuanto más completo esté tu perfil, <strong>más preciso será el % de compatibilidad</strong> con las ofertas de empleo. Las habilidades que añadas aquí se comparan automáticamente con cada oferta que busques.')}
+
+            <div style={cardStyle}>
+              <div className="flex items-center justify-between" style={{ marginBottom: '16px' }}>
+                <h3 style={{ fontWeight: 600, color: '#0a0a0a', fontSize: '0.95rem' }}>Información profesional</h3>
+                {!editMode && (
+                  <button onClick={() => { setEditMode(true); setProfileMessage(''); }}
+                    style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer', background: 'none', border: 'none' }}>
+                    ✏️ Editar
+                  </button>
+                )}
+              </div>
+              {profileMessage && <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '12px' }}>{profileMessage}</p>}
+
+              {!editMode && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {(profileForm.title || profileForm.location || profileForm.experience) && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                      {profileForm.title && <div><p style={{ color: '#9ca3af', fontSize: '0.7rem', marginBottom: '2px' }}>Título</p><p style={{ color: '#0a0a0a', fontWeight: 600, fontSize: '0.875rem' }}>{profileForm.title}</p></div>}
+                      {profileForm.location && <div><p style={{ color: '#9ca3af', fontSize: '0.7rem', marginBottom: '2px' }}>Ubicación</p><p style={{ color: '#374151', fontSize: '0.875rem' }}>📍 {profileForm.location}</p></div>}
+                      {profileForm.experience !== '' && profileForm.experience !== undefined && (
+                        <div><p style={{ color: '#9ca3af', fontSize: '0.7rem', marginBottom: '2px' }}>Experiencia</p><p style={{ color: '#374151', fontSize: '0.875rem' }}>{profileForm.experience} {profileForm.experience === 1 ? 'año' : 'años'}</p></div>
+                      )}
+                    </div>
+                  )}
+                  {profileForm.bio && <div><p style={{ color: '#9ca3af', fontSize: '0.7rem', marginBottom: '4px' }}>Sobre mí</p><p style={{ color: '#374151', fontSize: '0.875rem', lineHeight: 1.6 }}>{profileForm.bio}</p></div>}
+                  {profileForm.skills.length > 0 && (
+                    <div>
+                      <p style={{ color: '#9ca3af', fontSize: '0.7rem', marginBottom: '8px' }}>Habilidades</p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {profileForm.skills.map(skill => (
+                          <span key={skill} style={{ background: '#eef2ff', color: '#4338ca', fontSize: '0.75rem', padding: '4px 10px', borderRadius: '999px', fontWeight: 500 }}>{skill}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {(profileForm.links.linkedin || profileForm.links.portfolio || profileForm.links.github) && (
+                    <div>
+                      <p style={{ color: '#9ca3af', fontSize: '0.7rem', marginBottom: '8px' }}>Links</p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                        {profileForm.links.linkedin && <a href={profileForm.links.linkedin} target="_blank" rel="noopener noreferrer" style={{ color: '#6366f1', fontSize: '0.875rem' }}>LinkedIn</a>}
+                        {profileForm.links.portfolio && <a href={profileForm.links.portfolio} target="_blank" rel="noopener noreferrer" style={{ color: '#6366f1', fontSize: '0.875rem' }}>Portfolio</a>}
+                        {profileForm.links.github && <a href={profileForm.links.github} target="_blank" rel="noopener noreferrer" style={{ color: '#6366f1', fontSize: '0.875rem' }}>GitHub</a>}
+                      </div>
+                    </div>
+                  )}
+                  {!profileForm.title && !profileForm.bio && profileForm.skills.length === 0 && (
+                    <p style={{ color: '#9ca3af', fontSize: '0.875rem', textAlign: 'center', padding: '16px 0' }}>Tu perfil está vacío. Pulsa "✏️ Editar" para añadir tu información.</p>
+                  )}
+                </div>
+              )}
+
+              {editMode && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    {[
+                      { label: 'Título profesional', key: 'title', placeholder: 'ej. Desarrollador Frontend Junior', type: 'text' },
+                      { label: 'Ubicación', key: 'location', placeholder: 'ej. Madrid, España', type: 'text' },
+                    ].map(({ label, key, placeholder, type }) => (
+                      <div key={key}>
+                        <label style={{ color: '#374151', fontSize: '0.8rem', fontWeight: 500, display: 'block', marginBottom: '6px' }}>{label}</label>
+                        <input type={type} value={profileForm[key]} onChange={e => setProfileForm({ ...profileForm, [key]: e.target.value })}
+                          placeholder={placeholder} style={inputStyle}
+                          onFocus={e => e.target.style.boxShadow = '0 0 0 2px #6366f1'}
+                          onBlur={e => e.target.style.boxShadow = 'none'} />
+                      </div>
+                    ))}
+                    <div>
+                      <label style={{ color: '#374151', fontSize: '0.8rem', fontWeight: 500, display: 'block', marginBottom: '6px' }}>Años de experiencia</label>
+                      <input type="number" min="0" max="50" value={profileForm.experience} onChange={e => setProfileForm({ ...profileForm, experience: e.target.value })}
+                        placeholder="0" style={inputStyle}
+                        onFocus={e => e.target.style.boxShadow = '0 0 0 2px #6366f1'}
+                        onBlur={e => e.target.style.boxShadow = 'none'} />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ color: '#374151', fontSize: '0.8rem', fontWeight: 500, display: 'block', marginBottom: '6px' }}>Sobre mí</label>
+                    <textarea value={profileForm.bio} onChange={e => setProfileForm({ ...profileForm, bio: e.target.value })}
+                      placeholder="Cuéntanos sobre ti..." rows={3}
+                      style={{ ...inputStyle, resize: 'none' }}
+                      onFocus={e => e.target.style.boxShadow = '0 0 0 2px #6366f1'}
+                      onBlur={e => e.target.style.boxShadow = 'none'} />
+                  </div>
+                  <div>
+                    <label style={{ color: '#374151', fontSize: '0.8rem', fontWeight: 500, display: 'block', marginBottom: '6px' }}>Habilidades técnicas</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                      {profileForm.skills.map(skill => (
+                        <span key={skill} style={{ background: '#eef2ff', color: '#4338ca', fontSize: '0.75rem', padding: '4px 10px', borderRadius: '999px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          {skill}
+                          <button onClick={() => handleRemoveSkill(skill)} style={{ color: '#818cf8', cursor: 'pointer', background: 'none', border: 'none', padding: 0, fontSize: '0.9rem' }}>×</button>
+                        </span>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input type="text" value={skillInput} onChange={e => setSkillInput(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleAddSkill(skillInput)}
+                        placeholder="Añadir habilidad..." list="skills-list" style={{ ...inputStyle, flex: 1 }} />
+                      <datalist id="skills-list">{SKILL_SUGGESTIONS.map(s => <option key={s} value={s} />)}</datalist>
+                      <button onClick={() => handleAddSkill(skillInput)}
+                        style={{ background: '#6366f1', color: '#fff', borderRadius: '10px', padding: '10px 14px', fontWeight: 600, cursor: 'pointer', border: 'none', fontSize: '0.875rem' }}>+</button>
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ color: '#374151', fontSize: '0.8rem', fontWeight: 500, display: 'block', marginBottom: '6px' }}>Links</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {[
+                        { icon: 'in', key: 'linkedin', placeholder: 'https://linkedin.com/in/tu-perfil' },
+                        { icon: '🌐', key: 'portfolio', placeholder: 'https://tu-portfolio.com' },
+                        { icon: '⌥', key: 'github', placeholder: 'https://github.com/tu-usuario' },
+                      ].map(({ icon, key, placeholder }) => (
+                        <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ color: '#6366f1', width: '20px', fontSize: '0.8rem', fontWeight: 700 }}>{icon}</span>
+                          <input type="url" value={profileForm.links[key]} onChange={e => setProfileForm({ ...profileForm, links: { ...profileForm.links, [key]: e.target.value } })}
+                            placeholder={placeholder} style={{ ...inputStyle, flex: 1 }} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button onClick={handleProfileSave} disabled={savingProfile}
+                      style={{ flex: 1, background: '#0a0a0a', color: '#fff', borderRadius: '10px', padding: '10px', fontWeight: 600, cursor: 'pointer', border: 'none', fontSize: '0.875rem', opacity: savingProfile ? 0.5 : 1 }}>
+                      {savingProfile ? 'Guardando...' : 'Guardar cambios'}
+                    </button>
+                    <button onClick={handleCancelEdit}
+                      style={{ padding: '10px 16px', border: '1px solid #e5e7eb', borderRadius: '10px', color: '#6b7280', cursor: 'pointer', background: '#fff', fontSize: '0.875rem' }}>
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {infoBanner('📄', '¿Para qué sirve subir tu CV?', 'La IA analiza tu CV y <strong>rellena automáticamente tu experiencia y habilidades</strong>. Cuantas más habilidades tenga tu perfil, mejor será tu compatibilidad con las ofertas.')}
+
+            <div style={cardStyle}>
+              <h3 style={{ fontWeight: 600, color: '#0a0a0a', fontSize: '0.95rem', marginBottom: '16px' }}>📄 Currículum Vitae</h3>
+              {cvMessage && <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '12px' }}>{cvMessage}</p>}
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '20px' }}>
+                <button onClick={() => fileInputRef.current.click()} disabled={uploadingCV}
+                  style={{ background: '#0a0a0a', color: '#fff', borderRadius: '10px', padding: '8px 16px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', border: 'none', opacity: uploadingCV ? 0.5 : 1 }}>
+                  {uploadingCV ? 'Subiendo...' : '⬆️ Subir CV'}
+                </button>
+                <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx" onChange={handleCVUpload} className="hidden" />
+                <button onClick={handleDownloadCV}
+                  style={{ background: '#f9fafb', color: '#374151', borderRadius: '10px', padding: '8px 16px', fontSize: '0.8rem', fontWeight: 500, cursor: 'pointer', border: '1px solid #e5e7eb' }}>
+                  ⬇️ Descargar
+                </button>
+                <button onClick={handleDeleteCV}
+                  style={{ color: '#ef4444', fontSize: '0.8rem', fontWeight: 500, cursor: 'pointer', background: 'none', border: 'none' }}>
+                  🗑️ Eliminar
+                </button>
+              </div>
+
+              <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '16px' }}>
+                <p style={{ fontWeight: 600, color: '#0a0a0a', fontSize: '0.875rem', marginBottom: '4px' }}>✨ Análisis con IA</p>
+                <p style={{ color: '#9ca3af', fontSize: '0.75rem', marginBottom: '12px' }}>La IA lee tu CV y rellena automáticamente tu perfil.</p>
+                <button onClick={handleAnalyzeCV} disabled={analyzingCV}
+                  style={{ background: '#6366f1', color: '#fff', borderRadius: '10px', padding: '8px 16px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', border: 'none', display: 'flex', alignItems: 'center', gap: '8px', opacity: analyzingCV ? 0.7 : 1 }}>
+                  {analyzingCV ? <><span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />Analizando...</> : 'Analizar CV con IA'}
+                </button>
+                {cvAnalysisResult && (
+                  <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <p style={{ color: '#9ca3af', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Resultados</p>
+                    {cvAnalysisResult.bio && (
+                      <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '12px' }}>
+                        <p style={{ color: '#9ca3af', fontSize: '0.7rem', marginBottom: '4px' }}>Sobre mí actualizado</p>
+                        <p style={{ color: '#374151', fontSize: '0.875rem' }}>{cvAnalysisResult.bio}</p>
+                      </div>
+                    )}
+                    {cvAnalysisResult.newSkills?.length > 0 && (
+                      <div style={{ background: '#f0fdf4', borderRadius: '10px', padding: '12px' }}>
+                        <p style={{ color: '#16a34a', fontSize: '0.75rem', fontWeight: 600, marginBottom: '8px' }}>✅ {cvAnalysisResult.newSkills.length} nuevas habilidades añadidas</p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                          {cvAnalysisResult.newSkills.map(skill => (
+                            <span key={skill} style={{ background: '#dcfce7', color: '#15803d', fontSize: '0.75rem', padding: '3px 10px', borderRadius: '999px' }}>{skill}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Saved Jobs Tab */}
         {activeTab === 'jobs' && (
           !user.savedJobs?.length ? (
-            <div className="bg-white rounded-2xl shadow-md p-8 text-center text-gray-400">
-              <p className="text-4xl mb-3">📂</p>
-              <p>Aún no has guardado ninguna oferta.</p>
-              <button
-                onClick={() => navigate('/search')}
-                className="mt-4 inline-block bg-blue-600 text-white px-6 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition"
-              >
+            <div style={{ ...cardStyle, textAlign: 'center', padding: '48px 24px' }}>
+              <p style={{ fontSize: '2.5rem', marginBottom: '12px' }}>📂</p>
+              <p style={{ color: '#9ca3af', marginBottom: '16px' }}>Aún no has guardado ninguna oferta.</p>
+              <button onClick={() => navigate('/search')}
+                style={{ background: '#0a0a0a', color: '#fff', borderRadius: '10px', padding: '10px 24px', fontWeight: 600, cursor: 'pointer', border: 'none', fontSize: '0.875rem' }}>
                 Buscar empleos
               </button>
             </div>
           ) : (
-            <div className="space-y-4">
-              {user.savedJobs.map((job) => (
-                <div key={job._id} className="bg-white rounded-2xl shadow-md p-5 flex items-start justify-between gap-4">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {user.savedJobs.map(job => (
+                <div key={job._id} style={{ ...cardStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
                   <div>
-                    <h4 className="font-semibold text-gray-800">{job.title}</h4>
-                    <p className="text-sm text-gray-500">{job.company} · {job.location}</p>
-                    <span className="text-xs text-blue-500 font-medium uppercase tracking-wide">{job.source}</span>
+                    <h4 style={{ fontWeight: 600, color: '#0a0a0a', fontSize: '0.95rem', marginBottom: '4px' }}>{job.title}</h4>
+                    <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '4px' }}>{job.company} · {job.location}</p>
+                    <span style={{ color: '#6366f1', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{job.source}</span>
                   </div>
-                  <div className="flex flex-col items-end gap-2 shrink-0">
-                    <a href={job.url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline font-medium">Ver oferta</a>
-                    <button onClick={() => handleRemove(job._id)} className="text-xs text-red-400 hover:text-red-600 transition">Eliminar</button>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', flexShrink: 0 }}>
+                    <a href={job.url} target="_blank" rel="noopener noreferrer" style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: 500 }}>Ver oferta</a>
+                    <button onClick={() => handleRemove(job._id)} style={{ color: '#ef4444', fontSize: '0.75rem', cursor: 'pointer', background: 'none', border: 'none' }}>Eliminar</button>
                   </div>
                 </div>
               ))}
@@ -221,91 +531,94 @@ const Profile = () => {
           )
         )}
 
-        {/* CV */}
-        {activeTab === 'cv' && (
-          <div className="bg-white rounded-2xl shadow-md p-6">
-            <h3 className="font-semibold text-gray-800 mb-4">Currículum Vitae</h3>
-            <p className="text-sm text-gray-500 mb-4">Sube tu CV en PDF o Word. Máximo 5MB. Se almacena de forma segura en AWS S3.</p>
-
-            {cvMessage && (
-              <p className="text-sm mb-4 text-gray-600">{cvMessage}</p>
-            )}
-
-            <div className="flex gap-3 flex-wrap">
-              <button
-                onClick={() => fileInputRef.current.click()}
-                disabled={uploadingCV}
-                className="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50"
-              >
-                {uploadingCV ? 'Subiendo...' : 'Subir CV'}
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.doc,.docx"
-                onChange={handleCVUpload}
-                className="hidden"
-              />
-              <button
-                onClick={handleDownloadCV}
-                className="bg-gray-100 text-gray-700 px-5 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition"
-              >
-                Descargar CV
-              </button>
-              <button
-                onClick={handleDeleteCV}
-                className="text-red-500 hover:text-red-700 text-sm font-medium transition"
-              >
-                Eliminar CV
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* GitHub Repos */}
+        {/* GitHub Tab */}
         {activeTab === 'repos' && (
-          <div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {loadingRepos && (
-              <div className="flex justify-center py-8">
-                <div className="w-6 h-6 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '32px' }}>
+                <div style={{ width: 24, height: 24, border: '3px solid #e5e7eb', borderTopColor: '#6366f1', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
               </div>
             )}
-            {reposError && (
-              <div className="bg-red-50 text-red-600 text-sm rounded-lg px-4 py-3">{reposError}</div>
-            )}
-            {!loadingRepos && !reposError && (
-              <div className="space-y-3">
-                {repos.map((repo) => (
-                  <div key={repo.id} className="bg-white rounded-2xl shadow-md p-5">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <a
-                          href={repo.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-semibold text-blue-600 hover:underline"
-                        >
-                          {repo.name}
-                        </a>
-                        {repo.description && (
-                          <p className="text-sm text-gray-500 mt-1">{repo.description}</p>
-                        )}
-                        <div className="flex gap-3 mt-2 text-xs text-gray-400">
-                          {repo.language && <span>⬤ {repo.language}</span>}
-                          <span>⭐ {repo.stars}</span>
+            {reposError && <div style={{ background: '#fef2f2', color: '#dc2626', borderRadius: '10px', padding: '12px 16px', fontSize: '0.875rem' }}>{reposError}</div>}
+
+            {!loadingRepos && !reposError && analysis && (
+              <>
+                {infoBanner('🔗', '¿Para qué sirve conectar GitHub?', 'Analizamos tus repositorios para <strong>validar tus habilidades con código real</strong>. Las skills demostradas en GitHub pesan más en el % de compatibilidad con las ofertas.')}
+
+                <div style={cardStyle}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                    <h3 style={{ fontWeight: 600, color: '#0a0a0a', fontSize: '0.95rem' }}>📊 Tu stack según GitHub</h3>
+                    <span style={{ background: analysis.isActive ? '#f0fdf4' : '#f9fafb', color: analysis.isActive ? '#16a34a' : '#6b7280', fontSize: '0.75rem', fontWeight: 600, padding: '4px 10px', borderRadius: '999px' }}>
+                      {analysis.isActive ? '🟢 Activo' : '🔴 Sin actividad'}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '20px' }}>
+                    {[
+                      { label: 'Repositorios', value: analysis.totalRepos },
+                      { label: 'Propios', value: analysis.ownRepos },
+                      { label: 'Activos (90d)', value: analysis.recentReposCount },
+                    ].map(({ label, value }) => (
+                      <div key={label} style={{ background: '#eef2ff', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
+                        <p style={{ fontWeight: 700, fontSize: '1.5rem', color: '#6366f1' }}>{value}</p>
+                        <p style={{ color: '#9ca3af', fontSize: '0.7rem', marginTop: '2px' }}>{label}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {analysis.languages.length > 0 && (
+                    <div style={{ marginBottom: '20px' }}>
+                      <p style={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem', marginBottom: '16px' }}>Lenguajes detectados</p>
+                      <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <div style={{ width: '220px', height: '220px' }}>
+                          <Doughnut data={doughnutData} options={doughnutOptions} />
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-                {repos.length === 0 && (
-                  <p className="text-center text-gray-400 py-8">No se encontraron repositorios públicos.</p>
-                )}
-              </div>
+                  )}
+
+                  {analysis.validatedSkills.length > 0 && (
+                    <div>
+                      <p style={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem', marginBottom: '12px' }}>Validación de habilidades</p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {analysis.validatedSkills.map(({ skill, validated }) => (
+                          <span key={skill} style={{
+                            fontSize: '0.75rem', padding: '5px 12px', borderRadius: '999px', fontWeight: 500,
+                            background: validated ? '#f0fdf4' : '#fffbeb',
+                            color: validated ? '#16a34a' : '#d97706',
+                          }}>
+                            {validated ? '✅' : '⚠️'} {skill}
+                          </span>
+                        ))}
+                      </div>
+                      <p style={{ color: '#9ca3af', fontSize: '0.7rem', marginTop: '8px' }}>✅ Detectado en GitHub · ⚠️ No encontrado en tus repos</p>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <h3 style={{ fontWeight: 600, color: '#374151', fontSize: '0.875rem' }}>Repositorios</h3>
+                  {repos.map(repo => (
+                    <div key={repo.id} style={cardStyle}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <a href={repo.url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 600, color: '#6366f1', fontSize: '0.9rem' }}>{repo.name}</a>
+                        {repo.fork && <span style={{ background: '#f9fafb', color: '#9ca3af', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '999px' }}>Fork</span>}
+                      </div>
+                      {repo.description && <p style={{ color: '#6b7280', fontSize: '0.8rem', marginTop: '6px' }}>{repo.description}</p>}
+                      <div style={{ display: 'flex', gap: '12px', marginTop: '8px', color: '#9ca3af', fontSize: '0.75rem' }}>
+                        {repo.language && <span>⬤ {repo.language}</span>}
+                        <span>⭐ {repo.stars}</span>
+                      </div>
+                    </div>
+                  ))}
+                  {repos.length === 0 && <p style={{ textAlign: 'center', color: '#9ca3af', padding: '32px' }}>No se encontraron repositorios públicos.</p>}
+                </div>
+              </>
             )}
           </div>
         )}
       </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 };
