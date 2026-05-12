@@ -94,6 +94,7 @@ const Search = () => {
   const [loading, setLoading] = useState(false);
   const [totalHits, setTotalHits] = useState(0);
   const [activeSources, setActiveSources] = useState([]);
+  const [searchError, setSearchError] = useState('');
 
   const [searchKeyword, setSearchKeyword] = useState("");
   const [searchLocation, setSearchLocation] = useState("");
@@ -156,6 +157,7 @@ const Search = () => {
     if (!searchParams) return;
     const fetchJobs = async () => {
       setLoading(true);
+      setSearchError('');
       setAllJobs([]); setFilteredJobs([]); setVisibleCount(JOBS_PER_PAGE);
       try {
         const params = new URLSearchParams();
@@ -168,7 +170,7 @@ const Search = () => {
         setActiveSources(res.data.sources || [...new Set(rawJobs.map(j => j.source).filter(Boolean))]);
       } catch (err) {
         console.error("Error al obtener empleos:", err);
-        alert(err.response?.data?.error || "Error al buscar empleos.");
+        setSearchError(err.response?.data?.error || "Error al buscar empleos. Inténtalo de nuevo.");
       }
       setLoading(false);
     };
@@ -282,6 +284,12 @@ const Search = () => {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {searchError && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '14px 16px', marginTop: '16px' }}>
+            <p style={{ color: '#dc2626', fontSize: '0.875rem', fontWeight: 500 }}>❌ {searchError}</p>
           </div>
         )}
 

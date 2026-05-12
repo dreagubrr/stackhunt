@@ -1,44 +1,36 @@
-import puppeteer from 'puppeteer-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import * as cheerio from 'cheerio';
 
-puppeteer.use(StealthPlugin());
+const HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+  'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+  'Accept-Encoding': 'gzip, deflate, br',
+  'Connection': 'keep-alive',
+  'Upgrade-Insecure-Requests': '1',
+  'Cache-Control': 'max-age=0',
+};
 
-async function scrapePage(browser, url) {
-  const page = await browser.newPage();
-  await page.setUserAgent(
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36'
-  );
+async function fetchPage(url) {
   try {
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 20000 });
-    await page.waitForSelector('div.col-10.col-md-9.col-lg-7', { timeout: 10000 });
-    const html = await page.content();
-    await page.close();
-    return html;
+    const res = await fetch(url, { headers: HEADERS, signal: AbortSignal.timeout(15000) });
+    if (!res.ok) return null;
+    return await res.text();
   } catch {
-    await page.close();
     return null;
   }
 }
 
-async function scrapeFullDescription(browser, url) {
-  const page = await browser.newPage();
-  await page.setUserAgent(
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36'
-  );
+async function fetchDescription(url) {
   try {
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 15000 });
-    const html = await page.content();
-    await page.close();
+    const html = await fetchPage(url);
+    if (!html) return '';
     const $ = cheerio.load(html);
-    // Tecnoempleo job description container
     const desc = $('div.job-description, div#description, div.description, div.oferta-descripcion, div[itemprop="description"]')
-  .first().text().replace(/\s+/g, ' ').trim()
-  .replace(/^Descripción de la oferta de empleo\s*/i, '') // quitar el prefijo
-  .slice(0, 1000);
+      .first().text().replace(/\s+/g, ' ').trim()
+      .replace(/^Descripción de la oferta de empleo\s*/i, '')
+      .slice(0, 1000);
     return desc || '';
   } catch {
-    await page.close();
     return '';
   }
 }
@@ -53,8 +45,7 @@ function parseJobs(html, location) {
     const link = titleEl.first().attr('href');
     const company = $(el).find('a.text-primary.link-muted').first().text().trim();
     const locationText = $(el).find('span.d-block.d-lg-none').find('b').first().text().trim();
-    const descriptionEl = $(el).find('span.hidden-md-down.text-gray-800');
-    const snippet = descriptionEl.text().replace(/\s+/g, ' ').trim().slice(0, 300);
+    const snippet = $(el).find('span.hidden-md-down.text-gray-800').text().replace(/\s+/g, ' ').trim().slice(0, 300);
     const fullText = $(el).text().replace(/\s+/g, ' ');
 
     const dateMatch = fullText.match(/\d{2}\/\d{2}\/\d{4}/);
@@ -83,7 +74,6 @@ function parseJobs(html, location) {
 }
 
 export async function scrapeTecnoempleo(keyword, location = '') {
-  let browser;
   try {
     const searchParams = new URLSearchParams({
       te: keyword,
@@ -94,21 +84,14 @@ export async function scrapeTecnoempleo(keyword, location = '') {
     const baseUrl = `https://www.tecnoempleo.com/busqueda-empleo.php?${searchParams}`;
     const page2Url = `${baseUrl}&pagina=2`;
 
-    browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-    });
-
-    // Scrape listing pages in parallel
     const [html1, html2] = await Promise.all([
-      scrapePage(browser, baseUrl),
-      scrapePage(browser, page2Url),
+      fetchPage(baseUrl),
+      fetchPage(page2Url),
     ]);
 
     const jobs1 = html1 ? parseJobs(html1, location) : [];
     const jobs2 = html2 ? parseJobs(html2, location) : [];
 
-    // Deduplicate
     const seen = new Set();
     const allJobs = [...jobs1, ...jobs2].filter(job => {
       if (seen.has(job.link)) return false;
@@ -116,28 +99,25 @@ export async function scrapeTecnoempleo(keyword, location = '') {
       return true;
     });
 
-    // Fetch full description for top 15 jobs only
-    const TOP_N = 15;
+    // Fetch full descriptions for top 10 jobs in parallel (limited to avoid rate limiting)
+    const TOP_N = 10;
     const topJobs = allJobs.slice(0, TOP_N);
     const restJobs = allJobs.slice(TOP_N);
 
-    const fullDescriptions = await Promise.allSettled(
-      topJobs.map(job => scrapeFullDescription(browser, job.link))
+    const descriptions = await Promise.allSettled(
+      topJobs.map(job => fetchDescription(job.link))
     );
 
     topJobs.forEach((job, i) => {
-      const result = fullDescriptions[i];
+      const result = descriptions[i];
       if (result.status === 'fulfilled' && result.value) {
         job.description = result.value;
       }
     });
 
-    await browser.close();
-
     return [...topJobs, ...restJobs];
 
   } catch (err) {
-    if (browser) await browser.close();
     console.error('Tecnoempleo scraping error:', err.message);
     throw err;
   }

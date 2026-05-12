@@ -2,38 +2,46 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    lowercase: true,
-    trim: true,
-  },
-  password: {
-    type: String,
-    minlength: 6,
-  },
+  name: { type: String, required: true, trim: true },
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  password: { type: String, minlength: 6 },
   avatar: { type: String },
-  avatarKey: { type: String },  // S3 key para el avatar
+  avatarKey: { type: String },
 
-  // OAuth
   googleId: { type: String },
   githubId: { type: String },
   githubUsername: { type: String },
   githubToken: { type: String },
 
-  // Información del perfil
   profile: {
-    title: { type: String, trim: true },        // "Desarrollador Frontend"
-    location: { type: String, trim: true },     // "Madrid, España"
-    bio: { type: String, trim: true },          // descripción corta
-    experience: { type: Number },               // años de experiencia
-    skills: [{ type: String, trim: true }],     // ["React", "Node.js", ...]
+    title: { type: String, trim: true },
+    location: { type: String, trim: true },
+    bio: { type: String, trim: true },
+    experience: { type: Number },
+    phone: { type: String, trim: true },
+    skills: [{ type: String, trim: true }],
+    languages: [
+      {
+        language: { type: String, trim: true },
+        level: { type: String, trim: true },
+      }
+    ],
+    education: [
+      {
+        degree: { type: String, trim: true },
+        institution: { type: String, trim: true },
+        year: { type: String, trim: true },
+      }
+    ],
+    workExperience: [
+      {
+        company: { type: String, trim: true },
+        position: { type: String, trim: true },
+        startDate: { type: String, trim: true },
+        endDate: { type: String, trim: true },
+        description: { type: String, trim: true },
+      }
+    ],
     links: {
       linkedin: { type: String, trim: true },
       portfolio: { type: String, trim: true },
@@ -41,20 +49,12 @@ const userSchema = new mongoose.Schema({
     },
   },
 
-  // CV almacenado en AWS S3
-  cv: {
-    filename: String,
-    key: String,
-    uploadedAt: Date,
-  },
+  cv: { filename: String, key: String, uploadedAt: Date },
 
   savedJobs: [
     {
-      title: String,
-      company: String,
-      location: String,
-      url: String,
-      source: String,
+      title: String, company: String, location: String,
+      url: String, source: String,
       savedAt: { type: Date, default: Date.now },
     },
   ],

@@ -3,7 +3,7 @@ import axios from 'axios';
 import Groq from 'groq-sdk';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const pdfParse = require('pdf-parse');
+const pdfParse = require('pdf-parse/lib/pdf-parse.js');
 import { uploadToS3, deleteFromS3, getSignedDownloadUrl, uploadAvatarToS3, getSignedAvatarUrl } from '../services/s3Service.js';
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
@@ -262,7 +262,7 @@ ${cvText}`;
       title: currentProfile.title || '',
       location: currentProfile.location || '',
       bio: extracted.bio || currentProfile.bio || '',
-      experience: (extracted.experience && extracted.experience > 0) ? extracted.experience : (currentProfile.experience ?? 0),
+      experience: extracted.experience ?? currentProfile.experience ?? 0,
       skills: mergedSkills,
       links: {
         linkedin: currentProfile.links?.linkedin || '',
@@ -290,7 +290,8 @@ ${cvText}`;
 // PUT /api/users/profile
 export const updateProfile = async (req, res) => {
   try {
-    const { title, location, bio, experience, skills, links, avatar, avatarMimetype } = req.body;
+    const { title, location, bio, experience, phone, skills, languages, education, workExperience, links, avatar, avatarMimetype } = req.body;
+    console.log('updateProfile body:', { title, phone, languages, education, workExperience });
     const user = await User.findById(req.user._id);
 
     if (avatar && avatarMimetype) {
@@ -307,7 +308,11 @@ export const updateProfile = async (req, res) => {
       location: location ?? user.profile?.location,
       bio: bio ?? user.profile?.bio,
       experience: experience ?? user.profile?.experience,
+      phone: phone ?? user.profile?.phone,
       skills: skills ?? user.profile?.skills ?? [],
+      languages: languages ?? user.profile?.languages ?? [],
+      education: education ?? user.profile?.education ?? [],
+      workExperience: workExperience ?? user.profile?.workExperience ?? [],
       links: {
         linkedin: links?.linkedin ?? user.profile?.links?.linkedin,
         portfolio: links?.portfolio ?? user.profile?.links?.portfolio,
