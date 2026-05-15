@@ -10,16 +10,15 @@ import userRoutes from './routes/userRoutes.js';
 
 const app = express();
 
-// Connect to MongoDB
+//Conexión a Mongo
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('MongoDB conectado ✅'))
+  .then(() => console.log('MongoDB conectado'))
   .catch((err) => console.error('Error MongoDB:', err));
 
 app.use(cors({
   origin: [
     'http://localhost:3000',
     'http://localhost:5173',
-    'https://jobminerspain-1.onrender.com',
     process.env.FRONTEND_URL,
   ].filter(Boolean),
   credentials: true,
@@ -41,7 +40,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 
 app.get('/', (req, res) => {
-  res.send('StackHunt API - funcionando ✅');
+  res.send('StackHunt API funcionando ');
 });
 
 const PORT = process.env.PORT || 5000;

@@ -5,18 +5,21 @@ import { useAuth } from "../context/AuthContext";
 import JobCard, { calcCompatibility } from "../components/JobCard";
 
 const SOURCES = [
-  { value: "spain-all", label: "🇪🇸 Todas las fuentes" },
-  { value: "tecnoempleo", label: "💻 Tecnoempleo" },
-  { value: "jooble", label: "🔍 Jooble" },
-  { value: "adzuna", label: "📊 Adzuna" },
+  { value: "spain-all", label: "Todas las fuentes" },
+  { value: "adzuna", label: "Adzuna" },
+  { value: "jooble", label: "Jooble" },
+  { value: "tecnoempleo", label: "Tecnoempleo" }
 ];
 
 const CIUDADES = [
-  "Madrid", "Barcelona", "Valencia", "Sevilla", "Zaragoza",
-  "Málaga", "Murcia", "Palma", "Bilbao", "Alicante",
-  "Córdoba", "Valladolid", "Vigo", "Gijón", "Granada",
-  "Remoto", "España"
+
+ "Albacete", "Alicante", "Barcelona", "Bilbao", "Córdoba",
+  "Gijón", "Granada", "Madrid", "Málaga",
+  "Murcia", "Palma", "Sevilla", "Valencia",
+  "Valladolid", "Vigo", "Zaragoza", "Remoto", "España"
 ];
+
+const JOB_TYPES = ["Todos", "Completa", "Indefinido", "Parcial", "Temporal"];
 
 const SALARY_MIN = 0;
 const SALARY_MAX = 100000;
@@ -104,6 +107,7 @@ const Search = () => {
   const [filters, setFilters] = useState({
     sortBy: userSkills.length ? "compatibility" : "date",
     salaryRange: [SALARY_MIN, SALARY_MAX],
+    jobType: "Todos",
   });
 
   const applyFilters = useCallback((jobs, currentFilters, searchedLocation = '') => {
@@ -114,6 +118,11 @@ const Search = () => {
         const s = parseSalary(job.salary);
         return s !== -1 && s >= minSalary && s <= maxSalary;
       });
+    }
+    if (currentFilters.jobType && currentFilters.jobType !== "Todos") {
+      result = result.filter(job =>
+        (job.jobType || '').toLowerCase().includes(currentFilters.jobType.toLowerCase())
+      );
     }
     switch (currentFilters.sortBy) {
       case "compatibility":
@@ -215,7 +224,7 @@ const Search = () => {
         {userSkills.length > 0 && (
           <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '12px' }}
             className="px-4 py-3 mb-6 flex items-center gap-3 flex-wrap">
-            <span style={{ color: '#4338ca', fontWeight: 600 }} className="text-sm">🎯 Compatibilidad con:</span>
+            <span style={{ color: '#4338ca', fontWeight: 600 }} className="text-sm">Compatibilidad con:</span>
             {userSkills.map(skill => (
               <span key={skill} style={{ background: '#6366f1', color: '#fff', borderRadius: '999px' }}
                 className="text-xs px-2.5 py-0.5">{skill}</span>
@@ -260,20 +269,27 @@ const Search = () => {
         {allJobs.length > 0 && (
           <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e5e7eb' }} className="p-6 mb-6 shadow-sm">
             <h3 style={{ fontWeight: 600, color: '#0a0a0a', fontSize: '0.95rem' }} className="mb-4">Filtros</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label style={{ color: '#374151', fontSize: '0.875rem', fontWeight: 500 }} className="block mb-1.5">Ordenar por</label>
                 <select value={filters.sortBy} onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })}
                   style={inputStyle} className="w-full px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                   {userSkills.length > 0 && <option value="compatibility">🎯 Compatibilidad</option>}
+                  <option value="company">Empresa</option>
+                  <option value="source">Fuente</option>
                   <option value="date">Más reciente</option>
                   <option value="salary">Salario</option>
                   <option value="title">Título</option>
-                  <option value="company">Empresa</option>
-                  <option value="source">Fuente</option>
                 </select>
               </div>
-              <div className="md:col-span-2">
+              <div>
+                <label style={{ color: '#374151', fontSize: '0.875rem', fontWeight: 500 }} className="block mb-1.5">Tipo de jornada</label>
+                <select value={filters.jobType} onChange={(e) => setFilters({ ...filters, jobType: e.target.value })}
+                  style={inputStyle} className="w-full px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                  {JOB_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="md:col-span-3">
                 <SalaryRangeSlider salaryRange={filters.salaryRange} onChange={(range) => setFilters({ ...filters, salaryRange: range })} />
               </div>
             </div>

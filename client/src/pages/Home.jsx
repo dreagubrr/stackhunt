@@ -9,7 +9,7 @@ const Home = () => {
       {/* Hero */}
       <section className="relative min-h-screen flex items-center overflow-hidden">
 
-        {/* Gradient blob */}
+        {/* destello */}
         <div style={{
           position: 'absolute',
           top: '10%',
@@ -106,19 +106,16 @@ const Home = () => {
           <div className="grid md:grid-cols-3 gap-6">
             {[
               {
-                
                 title: 'Tiempo real',
                 desc: 'Ofertas obtenidas al instante de los portales más usados en España. Sin retrasos, sin datos obsoletos.',
               },
               {
-                
                 title: 'Múltiples fuentes',
                 desc: 'Tecnoempleo, Jooble ES y Adzuna en una sola búsqueda. Más cobertura, menos tiempo perdido.',
               },
               {
-               
-                title: 'Compatibilidad IA',
-                desc: 'Sube tu CV y deja que la IA analice tu perfil para mostrarte las ofertas más relevantes para ti.',
+                title: 'Genera tu CV',
+                desc: 'Rellena tu perfil y genera un CV profesional en PDF con dos plantillas a elegir. Listo para descargar.',
               },
             ].map((feature, i) => (
               <motion.div
@@ -142,7 +139,7 @@ const Home = () => {
       </section>
 
       {/* CTA */}
-      <section style={{ background: '#0a0a0a', margin: '0', width: '100%' }} className="py-24">
+      <section style={{ background: '#0a0a0a' }} className="py-24">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}

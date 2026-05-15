@@ -49,6 +49,9 @@ const userSchema = new mongoose.Schema({
     },
   },
 
+  resetPasswordToken: { type: String },
+  resetPasswordExpires: { type: Date },
+
   cv: { filename: String, key: String, uploadedAt: Date },
 
   savedJobs: [

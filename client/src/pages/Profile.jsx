@@ -46,7 +46,7 @@ const Profile = () => {
   const [showCVGenerator, setShowCVGenerator] = useState(false);
   const [avatarBase64, setAvatarBase64] = useState(null);
 
-  const emptyProfileForm = {
+  const defaultProfile = {
     title: '', location: '', bio: '', experience: '', phone: '',
     skills: [],
     languages: [],
@@ -55,7 +55,7 @@ const Profile = () => {
     links: { linkedin: '', portfolio: '', github: '' },
   };
 
-  const [profileForm, setProfileForm] = useState(emptyProfileForm);
+  const [profileForm, setProfileForm] = useState(defaultProfile);
 
   useEffect(() => {
     if (!user) return;
@@ -142,9 +142,9 @@ const Profile = () => {
           const updatedUser = { ...stored, avatar: data.avatar };
           if (isLocal) localStorage.setItem('stackhunt_user', JSON.stringify(updatedUser));
           else sessionStorage.setItem('stackhunt_user', JSON.stringify(updatedUser));
-          setProfileMessage('✅ Foto actualizada');
-        } else setProfileMessage('❌ Error al subir la foto');
-      } catch { setProfileMessage('❌ Error al subir la foto'); }
+          setProfileMessage('Foto actualizada');
+        } else setProfileMessage('Error al subir la foto');
+      } catch { setProfileMessage('Error al subir la foto'); }
     };
     reader.readAsDataURL(file);
   };
@@ -160,9 +160,9 @@ const Profile = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
       login({ ...user, profile: { ...profileForm } }, !!localStorage.getItem('stackhunt_user'));
-      setProfileMessage('✅ Perfil guardado correctamente');
+      setProfileMessage('Perfil guardado correctamente');
       setEditMode(false);
-    } catch (err) { setProfileMessage(`❌ ${err.message}`); }
+    } catch (err) { setProfileMessage(`${err.message}`); }
     finally { setSavingProfile(false); }
   };
 
@@ -197,8 +197,6 @@ const Profile = () => {
     setProfileForm({ ...profileForm, workExperience: updated });
   };
   const handleRemoveWorkExp = (idx) => setProfileForm({ ...profileForm, workExperience: profileForm.workExperience.filter((_, i) => i !== idx) });
-
-
 
 
 
@@ -300,8 +298,8 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div style={{ borderBottom: '1px solid #e5e7eb', marginBottom: '20px', display: 'flex', gap: '4px', overflowX: 'auto' }}>
+        {/* tabs */}
+        <div style={{ borderBottom: '1px solid #e5e7eb', marginBottom: '20px', marginTop: '16px', display: 'flex', gap: '4px', overflowX: 'auto' }}>
           {tabs.map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
               paddingBottom: '12px', paddingLeft: '4px', paddingRight: '4px',
@@ -314,10 +312,10 @@ const Profile = () => {
           ))}
         </div>
 
-        {/* Profile Tab */}
+        {/* perfil */}
         {activeTab === 'profile' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {infoBanner('💡', '¿Para qué sirve completar tu perfil?', 'Cuanto más completo esté tu perfil, <strong>más preciso será el % de compatibilidad</strong> con las ofertas de empleo y mejor será el CV que genere la IA.')}
+            {infoBanner('', '¿Para qué sirve completar tu perfil?', 'Cuanto más completo esté tu perfil, <strong>más preciso será el % de compatibilidad</strong> con las ofertas de empleo y mejor será el CV que genere la IA.')}
 
             <div style={cardStyle}>
               <div className="flex items-center justify-between" style={{ marginBottom: '16px' }}>
@@ -325,20 +323,20 @@ const Profile = () => {
                 {!editMode && (
                   <button onClick={() => { setEditMode(true); setProfileMessage(''); }}
                     style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer', background: 'none', border: 'none' }}>
-                    ✏️ Editar
+                    Editar
                   </button>
                 )}
               </div>
               {profileMessage && <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '12px' }}>{profileMessage}</p>}
 
-              {/* VIEW MODE */}
+              {/* modo vista */}
               {!editMode && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {(profileForm.title || profileForm.location || profileForm.experience || profileForm.phone) && (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
                       {profileForm.title && <div><p style={{ color: '#9ca3af', fontSize: '0.7rem', marginBottom: '2px' }}>Título</p><p style={{ color: '#0a0a0a', fontWeight: 600, fontSize: '0.875rem' }}>{profileForm.title}</p></div>}
-                      {profileForm.location && <div><p style={{ color: '#9ca3af', fontSize: '0.7rem', marginBottom: '2px' }}>Ubicación</p><p style={{ color: '#374151', fontSize: '0.875rem' }}>📍 {profileForm.location}</p></div>}
-                      {profileForm.phone && <div><p style={{ color: '#9ca3af', fontSize: '0.7rem', marginBottom: '2px' }}>Teléfono</p><p style={{ color: '#374151', fontSize: '0.875rem' }}>📞 {profileForm.phone}</p></div>}
+                      {profileForm.location && <div><p style={{ color: '#9ca3af', fontSize: '0.7rem', marginBottom: '2px' }}>Ubicación</p><p style={{ color: '#374151', fontSize: '0.875rem' }}> {profileForm.location}</p></div>}
+                      {profileForm.phone && <div><p style={{ color: '#9ca3af', fontSize: '0.7rem', marginBottom: '2px' }}>Teléfono</p><p style={{ color: '#374151', fontSize: '0.875rem' }}> {profileForm.phone}</p></div>}
                       {profileForm.experience !== '' && profileForm.experience !== undefined && (
                         <div><p style={{ color: '#9ca3af', fontSize: '0.7rem', marginBottom: '2px' }}>Experiencia</p><p style={{ color: '#374151', fontSize: '0.875rem' }}>{profileForm.experience} {profileForm.experience === 1 ? 'año' : 'años'}</p></div>
                       )}
@@ -407,7 +405,7 @@ const Profile = () => {
                 </div>
               )}
 
-              {/* EDIT MODE */}
+              {/* modo edición */}
               {editMode && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
@@ -538,9 +536,9 @@ const Profile = () => {
                   {sectionLabel('Links')}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {[
-                      { icon: 'in', key: 'linkedin', placeholder: 'https://linkedin.com/in/tu-perfil' },
-                      { icon: '🌐', key: 'portfolio', placeholder: 'https://tu-portfolio.com' },
-                      { icon: '⌥', key: 'github', placeholder: 'https://github.com/tu-usuario' },
+                      {key: 'linkedin', placeholder: 'https://linkedin.com/in/tu-perfil' },
+                      {key: 'portfolio', placeholder: 'https://tu-portfolio.com' },
+                      {key: 'github', placeholder: 'https://github.com/tu-usuario' },
                     ].map(({ icon, key, placeholder }) => (
                       <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span style={{ color: '#6366f1', width: '20px', fontSize: '0.8rem', fontWeight: 700 }}>{icon}</span>
@@ -568,23 +566,23 @@ const Profile = () => {
             <div style={cardStyle}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <h3 style={{ fontWeight: 600, color: '#0a0a0a', fontSize: '0.95rem', margin: 0 }}>📄 Currículum Vitae</h3>
+                  <h3 style={{ fontWeight: 600, color: '#0a0a0a', fontSize: '0.95rem', margin: 0 }}>Currículum Vitae</h3>
                   <p style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '4px' }}>Genera un CV profesional con tus datos de perfil</p>
                 </div>
                 <button onClick={handleOpenCVGenerator}
                   style={{ background: '#6366f1', color: '#fff', borderRadius: '10px', padding: '9px 18px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', border: 'none', whiteSpace: 'nowrap' }}>
-                  ✨ Generar CV
+                  Generar CV
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Saved Jobs Tab */}
+        {/* trabajos guardados  */}
         {activeTab === 'jobs' && (
           !user.savedJobs?.length ? (
             <div style={{ ...cardStyle, textAlign: 'center', padding: '48px 24px' }}>
-              <p style={{ fontSize: '2.5rem', marginBottom: '12px' }}>📂</p>
+              <p style={{ fontSize: '2.5rem', marginBottom: '12px' }}></p>
               <p style={{ color: '#9ca3af', marginBottom: '16px' }}>Aún no has guardado ninguna oferta.</p>
               <button onClick={() => navigate('/search')}
                 style={{ background: '#0a0a0a', color: '#fff', borderRadius: '10px', padding: '10px 24px', fontWeight: 600, cursor: 'pointer', border: 'none', fontSize: '0.875rem' }}>
@@ -622,11 +620,11 @@ const Profile = () => {
 
             {!loadingRepos && !reposError && analysis && (
               <>
-                {infoBanner('🔗', '¿Para qué sirve conectar GitHub?', 'Analizamos tus repositorios para <strong>validar tus habilidades con código real</strong>. Las skills demostradas en GitHub pesan más en el % de compatibilidad con las ofertas.')}
+                {infoBanner('','¿Para qué sirve conectar GitHub?', 'Analizamos tus repositorios para <strong>validar tus habilidades con código real</strong>. Las skills demostradas en GitHub pesan más en el % de compatibilidad con las ofertas.')}
 
                 <div style={cardStyle}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                    <h3 style={{ fontWeight: 600, color: '#0a0a0a', fontSize: '0.95rem' }}>📊 Tu stack según GitHub</h3>
+                    <h3 style={{ fontWeight: 600, color: '#0a0a0a', fontSize: '0.95rem' }}>Tu stack según GitHub</h3>
                     <span style={{ background: analysis.isActive ? '#f0fdf4' : '#f9fafb', color: analysis.isActive ? '#16a34a' : '#6b7280', fontSize: '0.75rem', fontWeight: 600, padding: '4px 10px', borderRadius: '999px' }}>
                       {analysis.isActive ? '🟢 Activo' : '🔴 Sin actividad'}
                     </span>

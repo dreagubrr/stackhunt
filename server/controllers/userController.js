@@ -8,7 +8,7 @@ import { uploadToS3, deleteFromS3, getSignedDownloadUrl, uploadAvatarToS3, getSi
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// POST /api/users/saved-jobs
+
 export const saveJob = async (req, res) => {
   const { title, company, location, url, source } = req.body;
   const user = await User.findById(req.user._id);
@@ -20,7 +20,7 @@ export const saveJob = async (req, res) => {
   res.status(201).json(user.savedJobs);
 };
 
-// DELETE /api/users/saved-jobs/:jobId
+
 export const removeSavedJob = async (req, res) => {
   const user = await User.findById(req.user._id);
   user.savedJobs = user.savedJobs.filter(
@@ -30,13 +30,13 @@ export const removeSavedJob = async (req, res) => {
   res.json(user.savedJobs);
 };
 
-// GET /api/users/saved-jobs
+
 export const getSavedJobs = async (req, res) => {
   const user = await User.findById(req.user._id);
   res.json(user.savedJobs);
 };
 
-// GET /api/users/github-repos
+
 export const getGithubRepos = async (req, res) => {
   const user = await User.findById(req.user._id);
   if (!user.githubToken) {
@@ -66,7 +66,7 @@ export const getGithubRepos = async (req, res) => {
   }
 };
 
-// GET /api/users/github-analysis
+
 export const getGithubAnalysis = async (req, res) => {
   const user = await User.findById(req.user._id);
   if (!user.githubToken) {
@@ -158,7 +158,7 @@ export const getGithubAnalysis = async (req, res) => {
   }
 };
 
-// POST /api/users/cv
+
 export const uploadCV = async (req, res) => {
   const { filename, data, mimetype } = req.body;
   if (!filename || !data || !mimetype) {
@@ -180,7 +180,6 @@ export const uploadCV = async (req, res) => {
   }
 };
 
-// GET /api/users/cv/download
 export const downloadCV = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
@@ -194,7 +193,7 @@ export const downloadCV = async (req, res) => {
   }
 };
 
-// DELETE /api/users/cv
+
 export const deleteCV = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
@@ -209,7 +208,7 @@ export const deleteCV = async (req, res) => {
   }
 };
 
-// POST /api/users/cv/analyze
+
 export const analyzeCV = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
@@ -217,16 +216,16 @@ export const analyzeCV = async (req, res) => {
       return res.status(404).json({ message: 'No tienes ningún CV subido' });
     }
 
-    // Download CV from S3
+    
     const cvUrl = await getSignedDownloadUrl(user.cv.key);
     const cvResponse = await axios.get(cvUrl, { responseType: 'arraybuffer' });
     const buffer = Buffer.from(cvResponse.data);
 
-    // Extract text from PDF
+   
     const parsed = await pdfParse(buffer);
     const cvText = parsed.text.slice(0, 6000);
 
-    // Send text to Groq
+    
     const prompt = `Eres un extractor de información de CVs. Analiza el siguiente texto de un CV y extrae esta información en formato JSON estricto, sin texto adicional ni markdown:
 {
   "experience": <número entero de años de experiencia laboral total, 0 si no hay>,
@@ -249,14 +248,14 @@ ${cvText}`;
     const responseText = completion.choices[0].message.content.replace(/```json|```/g, '').trim();
     const extracted = JSON.parse(responseText);
 
-    // Merge skills — add new ones without duplicates
+   
     const existingSkills = user.profile?.skills || [];
     const newSkills = (extracted.skills || []).filter(
       s => !existingSkills.map(e => e.toLowerCase()).includes(s.toLowerCase())
     );
     const mergedSkills = [...existingSkills, ...newSkills];
 
-    // Update profile preserving existing fields
+    
     const currentProfile = user.profile?.toObject ? user.profile.toObject() : (user.profile || {});
     user.profile = {
       title: currentProfile.title || '',
@@ -287,11 +286,11 @@ ${cvText}`;
   }
 };
 
-// PUT /api/users/profile
+
 export const updateProfile = async (req, res) => {
   try {
     const { title, location, bio, experience, phone, skills, languages, education, workExperience, links, avatar, avatarMimetype } = req.body;
-    console.log('updateProfile body:', { title, phone, languages, education, workExperience });
+    
     const user = await User.findById(req.user._id);
 
     if (avatar && avatarMimetype) {
@@ -328,7 +327,7 @@ export const updateProfile = async (req, res) => {
   }
 };
 
-// GET /api/users/profile
+
 export const getProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select('-password -githubToken');

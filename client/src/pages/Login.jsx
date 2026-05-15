@@ -40,7 +40,7 @@ const Login = () => {
   };
 
   return (
-    <div style={{ fontFamily: "'Inter', sans-serif", background: '#f7f6f3' }} className="min-h-screen flex items-center justify-center px-4">
+    <div style={{ fontFamily: "'Inter', sans-serif", background: '#f7f6f3' }} className="min-h-screen flex items-start justify-center px-4 pt-24 pb-16">
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
       {/* Blob decorativo */}
@@ -115,10 +115,15 @@ const Login = () => {
               className="w-full px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all" />
           </div>
 
-          <div className="flex items-center gap-2">
-            <input type="checkbox" id="remember" checked={remember} onChange={(e) => setRemember(e.target.checked)}
-              className="w-4 h-4 cursor-pointer accent-indigo-600" />
-            <label htmlFor="remember" style={{ color: '#6b7280' }} className="text-sm cursor-pointer">Recordarme</label>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="remember" checked={remember} onChange={(e) => setRemember(e.target.checked)}
+                className="w-4 h-4 cursor-pointer accent-indigo-600" />
+              <label htmlFor="remember" style={{ color: '#6b7280' }} className="text-sm cursor-pointer">Recordarme</label>
+            </div>
+            <NavLink to="/forgot-password" style={{ color: '#6366f1', fontSize: '0.8rem', fontWeight: 500 }} className="hover:underline">
+              ¿Olvidaste tu contraseña?
+            </NavLink>
           </div>
 
           <button type="submit" disabled={loading}

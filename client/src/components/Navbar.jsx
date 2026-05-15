@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import logo from '../assets/stackhuntlogohelvetica.png';
 
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -35,10 +36,7 @@ const Navbar = () => {
       >
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <NavLink to="/" className="flex items-center">
-            <span style={{ fontFamily: "'Inter', sans-serif", fontWeight: 800, fontSize: '1.2rem', letterSpacing: '-0.02em' }}
-              className="text-gray-900">
-              Stack<span className="text-gray-900">Hunt</span>
-            </span>
+            <img src={logo} alt="StackHunt" style={{ height: '36px', width: 'auto' }} />
           </NavLink>
 
           {/* Desktop links */}

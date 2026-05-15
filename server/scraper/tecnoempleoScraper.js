@@ -10,6 +10,17 @@ const HEADERS = {
   'Cache-Control': 'max-age=0',
 };
 
+function detectJobType(text) {
+  const t = (text || '').toLowerCase();
+  if (t.includes('indefinido') || t.includes('contrato indefinido')) return 'Indefinido';
+  if (t.includes('jornada completa') || t.includes('tiempo completo') || t.includes('full time') || t.includes('full-time')) return 'Completa';
+  if (t.includes('jornada parcial') || t.includes('tiempo parcial') || t.includes('part time') || t.includes('part-time')) return 'Parcial';
+  if (t.includes('prácticas') || t.includes('becario') || t.includes('trainee') || t.includes('internship')) return 'Prácticas';
+  if (t.includes('temporal') || t.includes('proyecto') || t.includes('temporal')) return 'Temporal';
+  if (t.includes('freelance') || t.includes('autónomo')) return 'Freelance';
+  return 'No especificado';
+}
+
 async function fetchPage(url) {
   try {
     const res = await fetch(url, { headers: HEADERS, signal: AbortSignal.timeout(15000) });
@@ -63,7 +74,7 @@ function parseJobs(html, location) {
         location: locationText || location || 'España',
         salary,
         datePosted,
-        jobType: 'No especificado',
+        jobType: detectJobType(snippet + ' ' + fullText),
         description: snippet,
         source: 'Tecnoempleo',
       });
@@ -99,7 +110,7 @@ export async function scrapeTecnoempleo(keyword, location = '') {
       return true;
     });
 
-    // Fetch full descriptions for top 10 jobs in parallel (limited to avoid rate limiting)
+    
     const TOP_N = 10;
     const topJobs = allJobs.slice(0, TOP_N);
     const restJobs = allJobs.slice(TOP_N);

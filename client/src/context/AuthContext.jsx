@@ -8,7 +8,6 @@ export const AuthProvider = ({ children }) => {
     return stored ? JSON.parse(stored) : null;
   });
 
-  // Stores validated skills from GitHub analysis
   const [githubValidatedSkills, setGithubValidatedSkills] = useState([]);
 
   const login = (userData, remember = true) => {
@@ -52,7 +51,6 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updateGithubValidatedSkills = (validatedSkills) => {
-    // validatedSkills is array of { skill, validated }
     const validated = validatedSkills
       .filter(s => s.validated)
       .map(s => s.skill);

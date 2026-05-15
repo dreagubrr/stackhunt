@@ -24,14 +24,14 @@ const AuthCallback = () => {
     if (data) {
       try {
         const user = JSON.parse(decodeURIComponent(data));
-        // OAuth logins don't ask "remember me" — use sessionStorage by default
+        // OAuth logins
         login(user, false);
         navigate('/profile');
       } catch {
         navigate('/login?error=parse');
       }
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [login, navigate, location.search]);
 
   return (
     <div className="min-h-screen flex items-center justify-center">

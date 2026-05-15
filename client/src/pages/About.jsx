@@ -2,12 +2,14 @@ import { motion } from 'framer-motion';
 
 const About = () => {
   const stack = [
-    { name: 'React + Tailwind CSS', desc: 'Interfaz de usuario moderna y responsive' },
-    { name: 'Node.js + Express', desc: 'Backend y API REST escalable' },
-    { name: 'Puppeteer + Cheerio', desc: 'Scraping de portales de empleo en tiempo real' },
-    { name: 'Groq / Llama 3.3', desc: 'Análisis de CV con inteligencia artificial' },
-    { name: 'AWS EC2 + S3', desc: 'Despliegue en producción y almacenamiento de archivos' },
-    { name: 'MongoDB Atlas', desc: 'Base de datos en la nube' },
+    { icon: '⚛️', name: 'React + Tailwind CSS', desc: 'Interfaz de usuario moderna y responsive' },
+    { icon: '🚀', name: 'Node.js + Express', desc: 'Backend y API REST escalable' },
+    { icon: '🕸️', name: 'Cheerio + Fetch', desc: 'Scraping ligero de portales de empleo en tiempo real' },
+    { icon: '📧', name: 'Brevo SMTP', desc: 'Envío de emails transaccionales y recuperación de contraseña' },
+    { icon: '☁️', name: 'AWS EC2 + S3', desc: 'Despliegue en producción y almacenamiento de archivos' },
+    { icon: '🍃', name: 'MongoDB Atlas', desc: 'Base de datos en la nube' },
+    { icon: '📄', name: 'jsPDF + html2canvas', desc: 'Generación de CV en PDF directamente desde el perfil' },
+    { icon: '🔐', name: 'Passport.js + JWT', desc: 'Autenticación con email, Google y GitHub' },
   ];
 
   return (
@@ -23,7 +25,7 @@ const About = () => {
           <div style={{ marginBottom: '48px' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '999px', padding: '6px 16px', fontSize: '0.75rem', color: '#6b7280', fontWeight: 500, marginBottom: '20px' }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }} />
-              TFG Desarrollo de Aplicaciones Web
+              Proyecto Intermodular — 2ºDAW
             </div>
             <h1 style={{ fontWeight: 800, fontSize: 'clamp(2rem, 5vw, 3rem)', letterSpacing: '-0.03em', color: '#0a0a0a', lineHeight: 1.1, marginBottom: '16px' }}>
               Sobre <span style={{ color: '#6366f1' }}>StackHunt</span>

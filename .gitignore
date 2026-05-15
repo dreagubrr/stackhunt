@@ -1,19 +1,16 @@
-# Ignore node modules in both client and server
+# Ignora modulos de cliente y servidor
 client/node_modules/
 server/node_modules/
 
-# Ignore build output
 client/build/
 
-# Ignore logs
 *.log
 
-# Ignore env files
 *.env
 
-# Ignore system files
+# Ignora archivos del sistema
 .DS_Store
 Thumbs.db
 
-# Optional: VSCode settings
+# Opcional: settings de vscode
 .vscode/

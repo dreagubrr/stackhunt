@@ -44,7 +44,7 @@ export const getAdzunaJobsController = async (req, res) => {
   }
 };
 
-// Agregador: todas las fuentes
+// Todas las fuentes
 export const getAllSpainJobs = async (req, res) => {
   try {
     const { keyword, location } = req.query;
