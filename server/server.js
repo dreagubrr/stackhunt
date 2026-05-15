@@ -15,6 +15,8 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB conectado'))
   .catch((err) => console.error('Error MongoDB:', err));
 
+
+  app.set('trust proxy', 1);
 app.use(cors({
   origin: [
     'http://localhost:3000',
@@ -30,6 +32,11 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'stackhunt_session',
   resave: false,
   saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 10 * 60 * 1000,
+  }
 }));
 
 app.use(passport.initialize());
