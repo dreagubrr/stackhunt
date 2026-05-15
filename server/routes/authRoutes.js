@@ -40,7 +40,9 @@ router.get('/github', passport.authenticate('github', { scope: ['user:email', 'p
 
 router.get('/github/link', (req, res, next) => {
   const token = req.query.token;
+  console.log('linkToken recibido:', token);
   if (token) req.session.linkToken = token;
+  console.log('session después de guardar:', req.session.linkToken);
   passport.authenticate('github', {
     scope: ['user:email', 'public_repo'],
     state: 'link',
