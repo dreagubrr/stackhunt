@@ -38,14 +38,13 @@ router.get('/google/callback',
 
 router.get('/github', passport.authenticate('github', { scope: ['user:email', 'public_repo'] }));
 
+// GitHub OAuth — vincular cuenta existente (token en state en vez de sesión)
 router.get('/github/link', (req, res, next) => {
   const token = req.query.token;
-  console.log('linkToken recibido:', token);
-  if (token) req.session.linkToken = token;
-  console.log('session después de guardar:', req.session.linkToken);
+  if (!token) return res.redirect(`${CLIENT_URL}/profile?error=notoken`);
   passport.authenticate('github', {
     scope: ['user:email', 'public_repo'],
-    state: 'link',
+    state: `link_${token}`,
   })(req, res, next);
 });
 
@@ -54,18 +53,20 @@ router.get('/github/callback',
   async (req, res) => {
     const state = req.query.state;
 
-    if (state === 'link') {
+    // Vincular GitHub a cuenta existente
+    if (state && state.startsWith('link_')) {
       try {
-        const linkToken = req.session.linkToken;
-        if (!linkToken) return res.redirect(`${CLIENT_URL}/profile?error=notoken`);
+        const linkToken = state.replace('link_', '');
         const decoded = jwt.verify(linkToken, process.env.JWT_SECRET);
         const User = (await import('../models/User.js')).default;
         const user = await User.findById(decoded.id);
         if (!user) return res.redirect(`${CLIENT_URL}/profile?error=nouser`);
+
         user.githubId = req.user.githubId;
         user.githubUsername = req.user.githubUsername;
         user.githubToken = req.user.githubToken;
         await user.save();
+
         const newToken = generateToken(user._id);
         const userData = {
           _id: user._id,
@@ -76,13 +77,14 @@ router.get('/github/callback',
           githubUsername: user.githubUsername,
           token: newToken,
         };
-        req.session.linkToken = null;
         return res.redirect(`${CLIENT_URL}/auth/callback?data=${encodeURIComponent(JSON.stringify(userData))}`);
       } catch (err) {
+        console.error('GitHub link error:', err.message);
         return res.redirect(`${CLIENT_URL}/profile?error=link`);
       }
     }
 
+    // Login/registro normal con GitHub
     const token = generateToken(req.user._id);
     const user = {
       _id: req.user._id,

@@ -11,7 +11,6 @@ const s3 = new S3Client({
 
 const BUCKET = process.env.AWS_S3_BUCKET;
 
-// Upload file buffer to S3
 export const uploadToS3 = async (buffer, filename, mimetype, folder = 'cvs') => {
   const key = `${folder}/${Date.now()}-${filename}`;
   await s3.send(new PutObjectCommand({
