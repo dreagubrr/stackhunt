@@ -1,4 +1,4 @@
-import './config/env.js';
+import './config/env.js'; 
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
@@ -10,14 +10,13 @@ import userRoutes from './routes/userRoutes.js';
 
 const app = express();
 
-//Conexión a Mongo
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB conectado'))
   .catch((err) => console.error('Error MongoDB:', err));
 
 
   app.set('trust proxy', 1);
-app.use(cors({
+  app.use(cors({
   origin: [
     'http://localhost:3000',
     'http://localhost:5173',

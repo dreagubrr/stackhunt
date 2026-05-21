@@ -39,7 +39,7 @@ passport.use(new GitHubStrategy({
   clientSecret: process.env.GITHUB_CLIENT_SECRET,
   callbackURL: 'https://api.stackhuntproject.com/api/auth/github/callback',
   scope: ['user:email', 'public_repo'],
-}, async (accessToken, refreshToken, profile, done) => {
+}, async (accessToken, profile, done) => {
   try {
     let user = await User.findOne({ githubId: profile.id });
 

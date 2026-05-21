@@ -1,13 +1,6 @@
 import User from '../models/User.js';
 import axios from 'axios';
-import Groq from 'groq-sdk';
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const pdfParse = require('pdf-parse/lib/pdf-parse.js');
-import { uploadToS3, deleteFromS3, getSignedDownloadUrl, uploadAvatarToS3, getSignedAvatarUrl } from '../services/s3Service.js';
-
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
+import { deleteFromS3, uploadAvatarToS3, getSignedAvatarUrl } from '../services/s3Service.js';
 
 export const saveJob = async (req, res) => {
   const { title, company, location, url, source } = req.body;
@@ -20,7 +13,6 @@ export const saveJob = async (req, res) => {
   res.status(201).json(user.savedJobs);
 };
 
-
 export const removeSavedJob = async (req, res) => {
   const user = await User.findById(req.user._id);
   user.savedJobs = user.savedJobs.filter(
@@ -30,12 +22,10 @@ export const removeSavedJob = async (req, res) => {
   res.json(user.savedJobs);
 };
 
-
 export const getSavedJobs = async (req, res) => {
   const user = await User.findById(req.user._id);
   res.json(user.savedJobs);
 };
-
 
 export const getGithubRepos = async (req, res) => {
   const user = await User.findById(req.user._id);
@@ -65,7 +55,6 @@ export const getGithubRepos = async (req, res) => {
     res.status(500).json({ message: 'Error al obtener repositorios de GitHub' });
   }
 };
-
 
 export const getGithubAnalysis = async (req, res) => {
   const user = await User.findById(req.user._id);
@@ -158,139 +147,10 @@ export const getGithubAnalysis = async (req, res) => {
   }
 };
 
-
-export const uploadCV = async (req, res) => {
-  const { filename, data, mimetype } = req.body;
-  if (!filename || !data || !mimetype) {
-    return res.status(400).json({ message: 'Faltan datos del archivo' });
-  }
-  try {
-    const user = await User.findById(req.user._id);
-    if (user.cv?.key) {
-      await deleteFromS3(user.cv.key).catch(() => {});
-    }
-    const buffer = Buffer.from(data, 'base64');
-    const key = await uploadToS3(buffer, filename, mimetype, 'cvs');
-    user.cv = { filename, key, uploadedAt: new Date() };
-    await user.save();
-    res.json({ message: 'CV subido correctamente', filename });
-  } catch (err) {
-    console.error('Error subiendo CV a S3:', err);
-    res.status(500).json({ message: 'Error al subir el CV' });
-  }
-};
-
-export const downloadCV = async (req, res) => {
-  try {
-    const user = await User.findById(req.user._id);
-    if (!user.cv?.key) {
-      return res.status(404).json({ message: 'No tienes ningún CV subido' });
-    }
-    const url = await getSignedDownloadUrl(user.cv.key);
-    res.json({ url, filename: user.cv.filename });
-  } catch (err) {
-    res.status(500).json({ message: 'Error al generar enlace de descarga' });
-  }
-};
-
-
-export const deleteCV = async (req, res) => {
-  try {
-    const user = await User.findById(req.user._id);
-    if (user.cv?.key) {
-      await deleteFromS3(user.cv.key);
-    }
-    user.cv = undefined;
-    await user.save();
-    res.json({ message: 'CV eliminado correctamente' });
-  } catch (err) {
-    res.status(500).json({ message: 'Error al eliminar el CV' });
-  }
-};
-
-
-export const analyzeCV = async (req, res) => {
-  try {
-    const user = await User.findById(req.user._id);
-    if (!user.cv?.key) {
-      return res.status(404).json({ message: 'No tienes ningún CV subido' });
-    }
-
-    
-    const cvUrl = await getSignedDownloadUrl(user.cv.key);
-    const cvResponse = await axios.get(cvUrl, { responseType: 'arraybuffer' });
-    const buffer = Buffer.from(cvResponse.data);
-
-   
-    const parsed = await pdfParse(buffer);
-    const cvText = parsed.text.slice(0, 6000);
-
-    
-    const prompt = `Eres un extractor de información de CVs. Analiza el siguiente texto de un CV y extrae esta información en formato JSON estricto, sin texto adicional ni markdown:
-{
-  "experience": <número entero de años de experiencia laboral total, 0 si no hay>,
-  "bio": "<resumen profesional en primera persona basado en la experiencia y habilidades reales del CV, máximo 2 frases concretas y específicas>",
-  "skills": ["skill1", "skill2"]
-}
-Las skills deben ser tecnologías, lenguajes y herramientas reales mencionadas en el CV.
-Solo devuelve el JSON puro, sin bloques de código ni explicaciones.
-
-CV:
-${cvText}`;
-
-    const completion = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.1,
-      max_tokens: 600,
-    });
-
-    const responseText = completion.choices[0].message.content.replace(/```json|```/g, '').trim();
-    const extracted = JSON.parse(responseText);
-
-   
-    const existingSkills = user.profile?.skills || [];
-    const newSkills = (extracted.skills || []).filter(
-      s => !existingSkills.map(e => e.toLowerCase()).includes(s.toLowerCase())
-    );
-    const mergedSkills = [...existingSkills, ...newSkills];
-
-    
-    const currentProfile = user.profile?.toObject ? user.profile.toObject() : (user.profile || {});
-    user.profile = {
-      title: currentProfile.title || '',
-      location: currentProfile.location || '',
-      bio: extracted.bio || currentProfile.bio || '',
-      experience: extracted.experience ?? currentProfile.experience ?? 0,
-      skills: mergedSkills,
-      links: {
-        linkedin: currentProfile.links?.linkedin || '',
-        portfolio: currentProfile.links?.portfolio || '',
-        github: currentProfile.links?.github || '',
-      },
-    };
-    await user.save();
-
-    res.json({
-      message: 'CV analizado correctamente',
-      extracted: {
-        bio: extracted.bio,
-        experience: extracted.experience,
-        newSkills,
-      },
-      profile: user.profile,
-    });
-  } catch (err) {
-    console.error('CV analysis error:', err.message);
-    res.status(500).json({ message: 'Error al analizar el CV', details: err.message });
-  }
-};
-
-
 export const updateProfile = async (req, res) => {
   try {
     const { title, location, bio, experience, phone, skills, languages, education, workExperience, links, avatar, avatarMimetype } = req.body;
-    
+
     const user = await User.findById(req.user._id);
 
     if (avatar && avatarMimetype) {
@@ -327,7 +187,6 @@ export const updateProfile = async (req, res) => {
   }
 };
 
-
 export const getProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select('-password -githubToken');
@@ -347,7 +206,6 @@ export const getProfile = async (req, res) => {
       avatar,
       githubUsername: user.githubUsername,
       profile: user.profile,
-      cv: user.cv ? { filename: user.cv.filename, uploadedAt: user.cv.uploadedAt } : null,
       savedJobs: user.savedJobs,
     });
   } catch (err) {

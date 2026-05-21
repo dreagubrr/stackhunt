@@ -2,7 +2,6 @@ import { scrapeTecnoempleo } from '../scraper/tecnoempleoScraper.js';
 import { getJoobleJobs as fetchJoobleJobs } from '../scraper/joobleApi.js';
 import { getAdzunaJobs } from '../scraper/adzunaApi.js';
 
-// Tecnoempleo
 export const getTecnoempleoJobs = async (req, res) => {
   try {
     const { keyword, location } = req.query;
@@ -16,7 +15,6 @@ export const getTecnoempleoJobs = async (req, res) => {
   }
 };
 
-// Jooble
 export const getJoobleJobs = async (req, res) => {
   try {
     const { keyword, location } = req.query;
@@ -30,7 +28,7 @@ export const getJoobleJobs = async (req, res) => {
   }
 };
 
-// Adzuna
+
 export const getAdzunaJobsController = async (req, res) => {
   try {
     const { keyword, location } = req.query;
@@ -44,7 +42,6 @@ export const getAdzunaJobsController = async (req, res) => {
   }
 };
 
-// Todas las fuentes
 export const getAllSpainJobs = async (req, res) => {
   try {
     const { keyword, location } = req.query;

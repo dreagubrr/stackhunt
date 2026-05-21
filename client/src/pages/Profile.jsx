@@ -109,7 +109,7 @@ const Profile = () => {
 
   useEffect(() => {
     if (activeTab === 'repos' && user?.githubUsername) loadRepos();
-  }, [activeTab, user]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeTab, user]); 
 
   if (!user) return <Navigate to="/" />;
 
@@ -400,7 +400,7 @@ const Profile = () => {
                     </div>
                   )}
                   {!profileForm.title && !profileForm.bio && profileForm.skills.length === 0 && (
-                    <p style={{ color: '#9ca3af', fontSize: '0.875rem', textAlign: 'center', padding: '16px 0' }}>Tu perfil está vacío. Pulsa "✏️ Editar" para añadir tu información.</p>
+                    <p style={{ color: '#9ca3af', fontSize: '0.875rem', textAlign: 'center', padding: '16px 0' }}>Tu perfil está vacío. Pulsa "Editar" para añadir tu información.</p>
                   )}
                 </div>
               )}

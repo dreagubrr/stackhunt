@@ -38,7 +38,7 @@ router.get('/google/callback',
 
 router.get('/github', passport.authenticate('github', { scope: ['user:email', 'public_repo'] }));
 
-// GitHub OAuth — vincular cuenta existente (token en state en vez de sesión)
+
 router.get('/github/link', (req, res, next) => {
   const token = req.query.token;
   if (!token) return res.redirect(`${CLIENT_URL}/profile?error=notoken`);
@@ -53,7 +53,6 @@ router.get('/github/callback',
   async (req, res) => {
     const state = req.query.state;
 
-    // Vincular GitHub a cuenta existente
     if (state && state.startsWith('link_')) {
       try {
         const linkToken = state.replace('link_', '');
@@ -84,7 +83,6 @@ router.get('/github/callback',
       }
     }
 
-    // Login/registro normal con GitHub
     const token = generateToken(req.user._id);
     const user = {
       _id: req.user._id,

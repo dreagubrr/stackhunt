@@ -22,7 +22,7 @@ export const uploadToS3 = async (buffer, filename, mimetype, folder = 'cvs') => 
   return key;
 };
 
-// Upload avatar to S3 (no ACL — uses signed URLs)
+//Subida de avatar a S3 (no ACL - usa URLS firmadas)
 export const uploadAvatarToS3 = async (base64Data, mimetype, userId) => {
   const ext = mimetype.split('/')[1] || 'jpg';
   const key = `avatars/${userId}-${Date.now()}.${ext}`;
@@ -35,13 +35,13 @@ export const uploadAvatarToS3 = async (base64Data, mimetype, userId) => {
     ContentType: mimetype,
   }));
 
-  // Return signed URL valid for 7 days
+  // Regresa URL firmado por 7 dias
   const command = new GetObjectCommand({ Bucket: BUCKET, Key: key });
   const url = await getSignedUrl(s3, command, { expiresIn: 604800 });
   return { key, url };
 };
 
-// Delete file from S3
+// Borra archivo del s3
 export const deleteFromS3 = async (key) => {
   await s3.send(new DeleteObjectCommand({
     Bucket: BUCKET,
@@ -49,13 +49,13 @@ export const deleteFromS3 = async (key) => {
   }));
 };
 
-// Generate a temporary signed URL (valid 1 hour)
+// Genera un URL firmado válido por 1 hora
 export const getSignedDownloadUrl = async (key) => {
   const command = new GetObjectCommand({ Bucket: BUCKET, Key: key });
   return await getSignedUrl(s3, command, { expiresIn: 3600 });
 };
 
-// Refresh avatar signed URL (valid 7 days)
+//Refresca el avatar firmado en URL tiene vigencia de 7 días 
 export const getSignedAvatarUrl = async (key) => {
   const command = new GetObjectCommand({ Bucket: BUCKET, Key: key });
   return await getSignedUrl(s3, command, { expiresIn: 604800 });
